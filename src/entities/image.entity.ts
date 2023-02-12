@@ -9,7 +9,10 @@ export class ImageEntity {
   id: number;
 
   @Column()
-  url: string;
+  taxonomy: string;
+
+  @Column()
+  name: string;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   @OneToOne((_type) => UserEntity, (user) => user.image)
