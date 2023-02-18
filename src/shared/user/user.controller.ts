@@ -22,7 +22,16 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   async updateUserWithAvatar(@Req() req: Request, @Body() { imageId }: UpAvatarDto): Promise<IFRsp<any>> {
     const userId = req.user['sub'];
-    const data = await this.userService.updateAvatarUser(imageId);
+    const data = await this.userService.updateAvatarUser({ userId, imageId });
+    if (!data) throw new DataNotFoundException(`User id ${imageId} not found`);
+    return { code: 200, message: 'ok', data: data };
+  }
+
+  @Post('update/banner')
+  @UseGuards(JwtAuthGuard)
+  async updateUserWithBanner(@Req() req: Request, @Body() { imageId }: UpAvatarDto): Promise<IFRsp<any>> {
+    const userId = req.user['sub'];
+    const data = await this.userService.updateBannerUser({ userId, imageId });
     if (!data) throw new DataNotFoundException(`User id ${imageId} not found`);
     return { code: 200, message: 'ok', data: data };
   }

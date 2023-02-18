@@ -1,14 +1,27 @@
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Body,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { Express } from 'express';
+import { Express, Request } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { UploadDto } from './dto/upload.dto';
+import { UploadService } from './upload.service';
+import { JwtAuthGuard } from 'src/auth/auth.guard';
 
 @Controller('file/upload')
 export class UploadController {
+  constructor(private readonly uploadService: UploadService) {}
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -37,11 +50,22 @@ export class UploadController {
       },
     })
   )
-  async uploadFile(@UploadedFile() file: Express.Multer.File, @Body() uploadDto: UploadDto): Promise<any> {
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+    @Body() uploadDto: UploadDto
+  ): Promise<any> {
     if (!file) throw new BadRequestException('File is missing');
+    const userId = req.user['sub'];
+    const imgPath = `uploads/${uploadDto.type}/${file.filename}`;
+    const image = await this.uploadService.uploadImageToDB({
+      imgAuthor: userId,
+      imgType: uploadDto.type,
+      imgPath: imgPath,
+      imgName: file.filename,
+    });
     return {
-      path: `uploads/${uploadDto.type}/${file.filename}`,
-      pathFile: file.path,
+      imgId: image.id,
       size: file.size,
     };
   }

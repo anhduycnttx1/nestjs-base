@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity';
@@ -9,7 +9,11 @@ import { ImageEntity } from 'src/entities/image.entity';
 export class UserService {
   constructor(
     @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>
+    private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(UserMetaEntity)
+    private readonly userMetaRepository: Repository<UserMetaEntity>,
+    @InjectRepository(ImageEntity)
+    private readonly imageRepository: Repository<ImageEntity>
   ) {}
 
   async createUser(data: any): Promise<UserEntity> {
@@ -23,8 +27,44 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async updateAvatarUser(userId: string): Promise<any> {
-    return 'done';
+  async updateAvatarUser(body: { userId: string; imageId: string }): Promise<any> {
+    const user = await this.userRepository.findOne({ where: { id: body.userId } });
+    if (!user) return null;
+    const image = await this.imageRepository.findOne({ where: { id: body.imageId } });
+    if (!image) throw new BadRequestException('Image not found!');
+    const metafind = await this.userMetaRepository.findOne({
+      where: { metaKey: 'profile_image', user: { id: body.userId } },
+    });
+    if (metafind) {
+      await this.userMetaRepository.update({ id: metafind.id }, { metaValue: image.id });
+      return { mid: metafind.id };
+    }
+    const meta = new UserMetaEntity();
+    meta.user = user;
+    meta.metaKey = 'profile_image';
+    meta.metaValue = image.id;
+    const metaCreate = await this.userMetaRepository.save(meta);
+    return { mid: metaCreate.id };
+  }
+
+  async updateBannerUser(body: { userId: string; imageId: string }): Promise<any> {
+    const user = await this.userRepository.findOne({ where: { id: body.userId } });
+    if (!user) return null;
+    const image = await this.imageRepository.findOne({ where: { id: body.imageId } });
+    if (!image) throw new BadRequestException('Image not found!');
+    const metafind = await this.userMetaRepository.findOne({
+      where: { metaKey: 'profile_banner', user: { id: body.userId } },
+    });
+    if (metafind) {
+      await this.userMetaRepository.update({ id: metafind.id }, { metaValue: image.id });
+      return { mid: metafind.id };
+    }
+    const meta = new UserMetaEntity();
+    meta.user = user;
+    meta.metaKey = 'profile_banner';
+    meta.metaValue = image.id;
+    const metaCreate = await this.userMetaRepository.save(meta);
+    return { mid: metaCreate.id };
   }
 
   async getUserProfile(userId: string): Promise<any> {
