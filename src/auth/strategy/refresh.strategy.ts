@@ -18,7 +18,7 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'refresh') {
   async validate(req: Request, payload: any) {
     const strAuthorization = req.get('Authorization');
     const refreshToken = strAuthorization.split(' ')[1].trim();
-    const user = await this.authService.validateUser(Number(payload.sub));
+    const user = await this.authService.validateUser(payload.sub);
     if (!user) {
       throw new UnauthorizedException();
     }

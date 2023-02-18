@@ -2,33 +2,40 @@ import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
-  OneToOne,
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
-import { ImageEntity } from './image.entity';
+
 import { PostEntity } from './post.entity';
+import { CommentMetaEntity } from './comment_meta.entity';
 
 @Entity()
 export class CommentEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   content: string;
+
+  @Column()
+  userId: string;
+
+  @Column({ default: true })
+  isActive: boolean;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  @ManyToOne((_type) => PostEntity, (post) => post.comments)
+  post: PostEntity;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  @OneToMany((_type) => CommentMetaEntity, (meta) => meta.comment)
+  metas: CommentMetaEntity[];
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToOne((_type) => ImageEntity, (image) => image.comment, { cascade: true })
-  image: ImageEntity;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => PostEntity, (post) => post.comments)
-  post: PostEntity;
 }

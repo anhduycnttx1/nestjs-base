@@ -1,36 +1,29 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  OneToMany,
-} from 'typeorm';
-import { ImageEntity } from './image.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+
 import { PostEntity } from './post.entity';
+import { UserMetaEntity } from './user_meta.entity';
 
 @Entity()
 export class UserEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ unique: true })
+  userName: string;
 
   @Column()
-  username: string;
+  userPass: string;
 
-  @Column()
-  password: string;
+  @Column({ unique: true })
+  userEmail: string;
 
-  @Column()
-  email: string;
-
-  @Column()
+  @Column({ nullable: true })
   hashRefresh: string;
 
-  @Column()
-  status: string;
+  @Column({ default: true })
+  isActive: boolean;
 
-  @Column()
+  @Column({ nullable: true })
   displayName: string;
 
   @CreateDateColumn()
@@ -40,10 +33,10 @@ export class UserEntity {
   updatedAt: Date;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToOne((_type) => ImageEntity, (image) => image.user, { cascade: true })
-  image: ImageEntity;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   @OneToMany((_type) => PostEntity, (post) => post.user)
   posts: PostEntity[];
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  @OneToMany((_type) => UserMetaEntity, (meta) => meta.user)
+  metas: UserMetaEntity[];
 }

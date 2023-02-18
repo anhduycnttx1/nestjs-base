@@ -2,44 +2,47 @@ import { Controller, Post, Body, UseGuards, Get, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { IFRsp, IFToken, IFUserProfile } from 'src/types';
+import { IFRsp, IFToken } from 'src/types';
 import { JwtAuthGuard, RefreshAuthGuard } from './auth.guard';
-import { UnauthorizedException } from 'src/exceptions/auth.exception';
-import { UserService } from 'src/shared/user/user.service';
+import { SignupDto } from './dto/signup.dto';
 
-@Controller('')
+@Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private readonly userService: UserService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('/auth/sign-in-password')
+  @Post('sign-in-password')
   async signInPassword(@Body() loginDto: LoginDto): Promise<IFRsp<IFToken>> {
-    const result = await this.authService.login(loginDto);
-    return result;
+    const token = await this.authService.login(loginDto);
+    return { code: 200, message: 'Login successful', data: token };
   }
 
-  @Get('/auth/refresh')
+  @Get('refresh')
   @UseGuards(RefreshAuthGuard)
   async refreshToken(@Req() req: Request): Promise<IFRsp<IFToken>> {
     const user = req.user;
     const newAccessToken = await this.authService.refreshToken(user['sub']);
-    return { status: { code: 1, message: 'ok' }, data: newAccessToken };
+    return { code: 200, message: 'ok', data: newAccessToken };
   }
 
-  @Get('/auth/sign-out')
+  @Get('sign-out')
   @UseGuards(JwtAuthGuard)
-  async logout(): Promise<IFRsp<any>> {
-    try {
-      return { status: { code: 1, message: 'ok' } };
-    } catch (error) {
-      throw new UnauthorizedException();
-    }
+  async logout(@Req() req: Request): Promise<IFRsp<any>> {
+    const user = req.user;
+    await this.authService.logout(user['sub']);
+    return { code: 200, message: 'ok' };
   }
 
-  // @Get('user/profile')
-  // @UseGuards(JwtAuthGuard)
-  // async getUserProfile(@Req() req: Request): Promise<IFRsp<IFUserProfile>> {
-  //   const user = req.user;
-  //   const result = await this.userService.getUserProfile(user['sub']);
-  //   return { status: { code: 1, message: 'ok' }, data: result };
-  // }
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@Req() req: Request): Promise<IFRsp<any>> {
+    const user = req.user;
+    const data = await this.authService.getMe(user['sub']);
+    return { code: 200, message: 'ok', data: data };
+  }
+
+  @Post('sign-up')
+  async getUserProfile(@Body() signupDto: SignupDto): Promise<IFRsp<IFToken>> {
+    const token = await this.authService.signup(signupDto);
+    return { code: 200, message: 'ok', data: token };
+  }
 }

@@ -1,53 +1,84 @@
 import { Injectable } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
-import { IFToken, IFRsp } from 'src/types';
+import { IFToken } from 'src/types';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/shared/user/user.service';
 import { AuthFailedException, UnauthorizedException } from 'src/exceptions';
+import { SignupDto } from './dto/signup.dto';
+import * as argon from 'argon2';
 
 @Injectable()
 export class AuthService {
   constructor(private readonly jwtService: JwtService, private readonly userService: UserService) {}
 
-  async login(loginDto: LoginDto): Promise<IFRsp<IFToken>> {
+  async signup(signupDto: SignupDto): Promise<IFToken> {
+    const { email, password, username, lastName, firstName } = signupDto;
+    // Kiểm tra tính hợp lệ của thông tin đăng nhập
+    if (!email || !password) throw new AuthFailedException('email and password are required');
+    // Kiểm tra người dùng đã tồn tại trong cơ sở dữ liệu chưa
+    const user = await this.userService.findUserByWhere({ userName: username });
+    if (user) throw new AuthFailedException(`An account with email ${email} already exists`);
+    const displayName = `${firstName} ${lastName}`;
+    // Mã hoá password
+    const hashed = await argon.hash(password);
+    // Tạo User
+    const userSignIn = await this.userService.createUser({ hashed, email, displayName, username });
+    // Tạo token và trả về cho controller
+    const payload = { sub: userSignIn.id, username: userSignIn.userName };
+    const token = await this.generateToken(payload);
+    // Mã hoá refresh_token và lưu vào database
+    const hasedToken = await argon.hash(token.refresh_token);
+    await this.userService.updateUser(userSignIn.id, { hashRefresh: hasedToken });
+    return token;
+  }
+  async login(loginDto: LoginDto): Promise<IFToken> {
     const { username, password } = loginDto;
     // Kiểm tra tính hợp lệ của thông tin đăng nhập
-    if (!username || !password) {
-      throw new AuthFailedException('Username and password are required');
-    }
+    if (!username || !password) throw new AuthFailedException('Username and password are required');
     // Tìm kiếm người dùng trong cơ sở dữ liệu
-    const user = await this.userService.findUserByUsername({ userLogin: username });
-    if (!user) {
-      throw new AuthFailedException('Incorrect username/password');
-    }
+    const user = await this.userService.findUserByWhere({ userName: username });
+    if (!user) throw new AuthFailedException('Incorrect username or password');
     // So sánh mật khẩu
-    const isPasswordMatch = await this.comparePassword(password, user.password);
-    if (!isPasswordMatch) {
-      throw new AuthFailedException('Incorrect username/password');
-    }
+    const isPasswordMatch = await this.comparePassword(password, user.userPass);
+    if (!isPasswordMatch) throw new AuthFailedException('Incorrect username or password');
     // Tạo token và trả về cho controller
-    const payload = { username: user.userLogin, sub: user.id };
+    const payload = { username: user.userName, sub: user.id };
     const token = await this.generateToken(payload);
-    return { status: { code: 1, message: 'Login successful' }, data: token };
-  }
-
-  async refreshToken(id: number): Promise<IFToken> {
-    const user = await this.userService.findUserByUsername({ id: id });
-    if (!user) throw new UnauthorizedException();
-    const token = this.generateToken({ sub: user.id, username: user.userLogin });
-    // xử lý logic tại đây, ví dụ như lưu token mới trong database.
+    // Mã hoá refresh_token và lưu vào database
+    const hasedToken = await argon.hash(token.refresh_token);
+    await this.userService.updateUser(user.id, { hashRefresh: hasedToken });
     return token;
   }
 
-  async validateUser(id: number) {
-    //xử lý logic xác thực người dùng tại đây
-    const user = await this.userService.findUserByUsername({ id: id });
+  async logout(id: string) {
+    const user = await this.userService.findUserByWhere({ id: id });
+    await this.userService.updateUser(user.id, { hashRefresh: null });
+    return 'logout';
+  }
+
+  async refreshToken(id: string): Promise<IFToken> {
+    const user = await this.userService.findUserByWhere({ id: id });
+    if (!user) throw new UnauthorizedException();
+    const token = await this.generateToken({ sub: user.id, username: user.userName });
+    const hasedToken = await argon.hash(token.refresh_token);
+    await this.userService.updateUser(user.id, { hashRefresh: hasedToken });
+    return token;
+  }
+
+  async validateUser(id: string) {
+    const user = await this.userService.findUserByWhere({ id: id });
+    if (!user) return null;
     return user;
   }
 
-  private comparePassword(password: string, hashedPassword: string) {
-    const checked = true;
-    // const checked = hasher.CheckPassword(password, hashedPassword);
+  async getMe(id: string) {
+    const user = await this.userService.getAuthorLogin(id);
+    if (!user) return null;
+    return user;
+  }
+
+  private async comparePassword(password: string, hashedPassword: string) {
+    const checked = await argon.verify(hashedPassword, password);
     return checked;
   }
 
