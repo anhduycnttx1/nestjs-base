@@ -6,10 +6,10 @@ export interface IFToken {
 export interface IFAuthInfo {
   id: string;
   display_name: string;
-  avatar: string;
+  avatar: Url;
 }
 
-export type Url = string;
+export type Url = string | null;
 
 export interface IFRsp<Type> {
   code: number;
@@ -31,7 +31,7 @@ export interface IFPostList {
   preview: Url;
   countLike: number;
   countComment: number;
-  release_date: Date;
+  releaseDate: Date;
   author: IFAuthInfo;
 }
 

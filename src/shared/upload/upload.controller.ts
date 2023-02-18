@@ -7,6 +7,9 @@ import {
   Body,
   UseGuards,
   Req,
+  Get,
+  Param,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -16,11 +19,12 @@ import * as fs from 'fs';
 import { UploadDto } from './dto/upload.dto';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { Response } from 'express';
 
-@Controller('file/upload')
+@Controller('file')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
-  @Post()
+  @Post('upload')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -57,7 +61,7 @@ export class UploadController {
   ): Promise<any> {
     if (!file) throw new BadRequestException('File is missing');
     const userId = req.user['sub'];
-    const imgPath = `uploads/${uploadDto.type}/${file.filename}`;
+    const imgPath = `public/${uploadDto.type}/${file.filename}`;
     const image = await this.uploadService.uploadImageToDB({
       imgAuthor: userId,
       imgType: uploadDto.type,
@@ -68,5 +72,13 @@ export class UploadController {
       imgId: image.id,
       size: file.size,
     };
+  }
+
+  @Get('assets/:filename')
+  async getImage(@Param('filename') filename: string, @Res() res: Response) {
+    // Set content type of response
+    res.set('Content-Type', 'image/jpeg');
+    // Return image file
+    res.sendFile(path.join(__dirname, '..', 'uploads', filename));
   }
 }
