@@ -15,8 +15,7 @@ export class PostMetaEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => PostEntity, (post) => post.metas)
+  @ManyToOne(() => PostEntity, (post) => post.metas)
   @JoinColumn()
   post: PostEntity;
 

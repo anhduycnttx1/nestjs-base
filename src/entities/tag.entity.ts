@@ -1,5 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
-
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToMany } from 'typeorm';
 import { PostEntity } from './post.entity';
 
 @Entity()
@@ -8,11 +7,13 @@ export class TagEntity {
   id: string;
 
   @Column()
-  tag_name: string;
+  name: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => PostEntity, (post) => post.tags)
-  post: PostEntity;
+  @Column({ unique: true })
+  slug: string;
+
+  @ManyToMany(() => PostEntity, (post) => post.tags)
+  posts: PostEntity[];
 
   @CreateDateColumn()
   createdAt: Date;

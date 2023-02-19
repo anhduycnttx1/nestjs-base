@@ -32,11 +32,9 @@ export class UserEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToMany((_type) => PostEntity, (post) => post.user)
+  @OneToMany(() => PostEntity, (post) => post.user)
   posts: PostEntity[];
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToMany((_type) => UserMetaEntity, (meta) => meta.user)
+  @OneToMany(() => UserMetaEntity, (meta) => meta.user)
   metas: UserMetaEntity[];
 }

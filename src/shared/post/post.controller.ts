@@ -4,6 +4,7 @@ import { DataNotFoundException } from 'src/exceptions';
 import { PostService } from './post.service';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
 import { IFRsp } from 'src/types';
+import { CreatePostDto } from './dto/create-post.dto';
 
 @Controller()
 export class PostController {
@@ -31,5 +32,13 @@ export class PostController {
     const result = await this.postService.getPostById(postId);
     if (!result) throw new DataNotFoundException(`Post id ${postId} not found`);
     return { code: 200, message: 'ok', data: result };
+  }
+
+  @Post('posts')
+  @UseGuards(JwtAuthGuard)
+  async createPost(@Body() body: CreatePostDto, @Req() req: Request): Promise<IFRsp<any>> {
+    const userId = req.user['sub'];
+    const result = await this.postService.createNewPost(userId, body);
+    return { code: 201, message: 'ok', data: result };
   }
 }

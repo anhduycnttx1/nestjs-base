@@ -15,8 +15,7 @@ export class CommentMetaEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => CommentEntity, (comment) => comment.metas)
+  @ManyToOne(() => CommentEntity, (comment) => comment.metas)
   @JoinColumn()
   comment: CommentEntity;
 

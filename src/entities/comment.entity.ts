@@ -25,12 +25,10 @@ export class CommentEntity {
   @Column({ default: true })
   isActive: boolean;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => PostEntity, (post) => post.comments)
+  @ManyToOne(() => PostEntity, (post) => post.comments)
   post: PostEntity;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToMany((_type) => CommentMetaEntity, (meta) => meta.comment)
+  @OneToMany(() => CommentMetaEntity, (meta) => meta.comment)
   metas: CommentMetaEntity[];
 
   @CreateDateColumn()

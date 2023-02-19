@@ -15,8 +15,7 @@ export class UserMetaEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => UserEntity, (user) => user.metas)
+  @ManyToOne(() => UserEntity, (user) => user.metas)
   @JoinColumn()
   user: UserEntity;
 

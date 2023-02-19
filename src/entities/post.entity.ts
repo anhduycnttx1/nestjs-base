@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
   OneToMany,
   ManyToOne,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { CommentEntity } from './comment.entity';
 import { UserEntity } from './user.entity';
@@ -38,19 +40,16 @@ export class PostEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToMany((_type) => PostMetaEntity, (meta) => meta.post)
+  @OneToMany(() => PostMetaEntity, (meta) => meta.post)
   metas: PostMetaEntity[];
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToMany((_type) => TagEntity, (meta) => meta.post)
+  @ManyToMany(() => TagEntity)
+  @JoinTable({ name: 'post_tags_relationships' })
   tags: TagEntity[];
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => UserEntity, (user) => user.posts)
+  @ManyToOne(() => UserEntity, (user) => user.posts)
   user: UserEntity;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @OneToMany((_type) => CommentEntity, (comment) => comment.post)
+  @OneToMany(() => CommentEntity, (comment) => comment.post)
   comments: CommentEntity[];
 }
