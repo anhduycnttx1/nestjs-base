@@ -32,7 +32,7 @@ export class AuthController {
     return { code: 200, message: 'ok' };
   }
 
-  @Get('me')
+  @Get('authenticate')
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request): Promise<IFRsp<any>> {
     const user = req.user;
