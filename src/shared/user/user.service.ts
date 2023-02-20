@@ -97,10 +97,10 @@ export class UserService {
         'user.userName as username',
         'user.userEmail as email',
         'user.displayName as display_name ',
-        'image.path as avatar',
+        'image.path as path',
       ])
       .getRawOne();
-    return author;
+    return { ...author, avatar: author?.path ? `http://localhost:8000/api/posi/v1/${author?.path}` : null };
   }
   async findUserByWhere(where: any): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: where });

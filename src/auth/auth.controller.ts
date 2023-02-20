@@ -16,11 +16,10 @@ export class AuthController {
     return { code: 200, message: 'Login successful', data: token };
   }
 
-  @Get('refresh')
-  @UseGuards(RefreshAuthGuard)
-  async refreshToken(@Req() req: Request): Promise<IFRsp<IFToken>> {
-    const user = req.user;
-    const newAccessToken = await this.authService.refreshToken(user['sub']);
+  @Post('refresh')
+  // @UseGuards(RefreshAuthGuard)
+  async refreshToken(@Body('refreshToken') refreshToken: string): Promise<IFRsp<IFToken>> {
+    const newAccessToken = await this.authService.refreshToken(refreshToken);
     return { code: 200, message: 'ok', data: newAccessToken };
   }
 
@@ -32,7 +31,7 @@ export class AuthController {
     return { code: 200, message: 'ok' };
   }
 
-  @Get('me')
+  @Get('authenticate')
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request): Promise<IFRsp<any>> {
     const user = req.user;

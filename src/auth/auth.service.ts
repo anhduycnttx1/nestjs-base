@@ -56,8 +56,9 @@ export class AuthService {
     return 'logout';
   }
 
-  async refreshToken(id: string): Promise<IFToken> {
-    const user = await this.userService.findUserByWhere({ id: id });
+  async refreshToken(refreshToken: string): Promise<IFToken> {
+    const playload = await this.jwtService.verifyAsync(refreshToken, { secret: 'rt-secret' });
+    const user = await this.userService.findUserByWhere({ id: playload['sub'] });
     if (!user) throw new UnauthorizedException();
     const token = await this.generateToken({ sub: user.id, username: user.userName });
     const hasedToken = await argon.hash(token.refresh_token);
