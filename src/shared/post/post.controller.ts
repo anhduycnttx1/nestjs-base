@@ -26,6 +26,21 @@ export class PostController {
     });
     return { code: 200, message: 'ok', data: data };
   }
+  @Get('posts/user/:userId')
+  async getPostListByUser(@Query() query: any, @Param('userId') userId: string): Promise<IFRsp<any>> {
+    const page = Number(query['page-index']) || 1;
+    const perPage = Number(query['page-size']) || 20;
+    const order = query['order'] || '';
+    const direction = query['direction'] || 'asc';
+    const data = await this.postService.getlistPostByUser({
+      page,
+      perPage,
+      direction,
+      userId,
+      order,
+    });
+    return { code: 200, message: 'ok', data: data };
+  }
 
   @Get('post/:postId')
   async getPostDetail(@Param('postId') postId: string): Promise<IFRsp<any>> {
