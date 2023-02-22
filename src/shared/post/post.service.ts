@@ -181,7 +181,7 @@ export class PostService {
       id: post?.id,
       title: post?.title,
       countLike: post?.countlike,
-      countComment: Number(post?.commentCount),
+      countComment: post?.commentCount ? Number(post?.commentCount) : 0,
       image: post?.path ? `http://localhost:8000/api/posi/v1/${post?.path}` : null,
       release_date: post?.releasedate,
       author: {
@@ -217,7 +217,6 @@ export class PostService {
       meta.metaValue = body.imageId || '';
       await this.postMetaRepository.save(meta);
     }
-
     //Tạo tags với post
     return await this.getPostById(postNew.id);
   }

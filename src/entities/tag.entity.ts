@@ -1,5 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToMany,
+  OneToMany,
+} from 'typeorm';
 import { PostEntity } from './post.entity';
+import { UserTagRelationshipsEntity } from './user_tags_relationships';
+import { UserEntity } from './user.entity';
 
 @Entity()
 export class TagEntity {
@@ -14,6 +24,12 @@ export class TagEntity {
 
   @ManyToMany(() => PostEntity, (post) => post.tags)
   posts: PostEntity[];
+
+  @ManyToMany(() => UserEntity, (user) => user.tags)
+  users: UserEntity[];
+
+  @OneToMany(() => UserTagRelationshipsEntity, (relation) => relation.tag)
+  userFollow: UserTagRelationshipsEntity[];
 
   @CreateDateColumn()
   createdAt: Date;

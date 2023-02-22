@@ -1,7 +1,20 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  JoinTable,
+  ManyToMany,
+} from 'typeorm';
 
 import { PostEntity } from './post.entity';
 import { UserMetaEntity } from './user_meta.entity';
+
+import { UserTagRelationshipsEntity } from './user_tags_relationships';
+import { TagEntity } from './tag.entity';
+// import { UserTagRelationshipsEntity } from './user_tags_relationships';
 
 @Entity()
 export class UserEntity {
@@ -31,6 +44,16 @@ export class UserEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @ManyToMany(() => TagEntity, (tag) => tag.users)
+  @JoinTable({
+    name: 'user_tags_relationships',
+    joinColumn: { name: 'userId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
+  })
+  tags: TagEntity[];
+  // @OneToMany(() => UserTagRelationshipsEntity, (relation) => relation.user)
+  // userTags: UserTagRelationshipsEntity[];
 
   @OneToMany(() => PostEntity, (post) => post.user)
   posts: PostEntity[];

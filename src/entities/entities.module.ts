@@ -8,6 +8,7 @@ import { CommentMetaEntity } from './comment_meta.entity';
 import { TagEntity } from './tag.entity';
 import { PostMetaEntity } from './post_meta.entity';
 import { UserMetaEntity } from './user_meta.entity';
+import { UserTagRelationshipsEntity } from './user_tags_relationships';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserMetaEntity } from './user_meta.entity';
       TagEntity,
       PostMetaEntity,
       UserMetaEntity,
+      UserTagRelationshipsEntity,
     ]),
   ],
   exports: [
@@ -32,6 +34,7 @@ import { UserMetaEntity } from './user_meta.entity';
       TagEntity,
       PostMetaEntity,
       UserMetaEntity,
+      UserTagRelationshipsEntity,
     ]),
   ],
 })

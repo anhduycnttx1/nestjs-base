@@ -70,10 +70,14 @@ export class UserService {
   async getUserProfile(userId: string): Promise<any> {
     const author = await this.userRepository
       .createQueryBuilder('user')
-      .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaKey', { metaKey: 'profile_image' })
-      .leftJoin(UserMetaEntity, 'um2', 'um2.user = user.id AND um2.metaKey = :metaKey', { metaKey: 'profile_banner' })
       .where('user.id = :userId', { userId })
+      .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaAvatarKey', {
+        metaAvatarKey: 'profile_image',
+      })
       .leftJoin(ImageEntity, 'imageAvatar', 'imageAvatar.id = uuid(um.metaValue)')
+      .leftJoin(UserMetaEntity, 'um2', 'um2.user = user.id AND um2.metaKey = :metaBannerKey', {
+        metaBannerKey: 'profile_banner',
+      })
       .leftJoin(ImageEntity, 'imageBanner', 'imageBanner.id = uuid(um2.metaValue)')
       .select([
         'user.id as id',
@@ -84,7 +88,11 @@ export class UserService {
         'imageBanner.path as banner',
       ])
       .getRawOne();
-    return author;
+    return {
+      ...author,
+      avatar: author?.avatar ? `http://localhost:8000/api/posi/v1/${author?.avatar}` : null,
+      banner: author?.banner ? `http://localhost:8000/api/posi/v1/${author?.banner}` : null,
+    };
   }
   async getAuthorLogin(userId: string): Promise<any> {
     const author = await this.userRepository
@@ -109,5 +117,11 @@ export class UserService {
 
   async updateUser(id: string, newData: Partial<UserEntity>): Promise<any> {
     return await this.userRepository.update(id, newData);
+  }
+
+  async getTagWithUser(userId: string, tags: string[]): Promise<any> {
+    const user = this.userRepository.findOne({ where: { id: userId } });
+    console.log(user);
+    return 'done';
   }
 }

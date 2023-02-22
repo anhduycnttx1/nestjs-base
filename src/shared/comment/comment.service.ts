@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PostEntity } from 'src/entities/post.entity';
-import { PostMetaEntity } from 'src/entities/post_meta.entity';
+
 import { Repository } from 'typeorm';
 import { CommentEntity } from './../../entities/comment.entity';
 import { UserService } from './../user/user.service';
