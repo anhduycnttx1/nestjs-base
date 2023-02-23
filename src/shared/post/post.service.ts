@@ -49,7 +49,6 @@ export class PostService {
       ])
       .addSelect('COUNT(comment.id)', 'commentCount')
       .getRawOne();
-    console.log(post);
     if (!post) return null;
     const tags = await this.tagService.findTagsByPostId(post.id);
     const result = {

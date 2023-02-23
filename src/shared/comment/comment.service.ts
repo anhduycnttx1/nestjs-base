@@ -34,19 +34,17 @@ export class CommentService {
         'comt.content as content',
         'comt.createdAt as releasedate',
         'imageAuth.path as avatar',
-        'um.metaValue as test',
         'user.id as idAuthor',
         'user.displayName as nameAuthor',
       ])
       .getRawMany();
-    console.log(comments);
     const result = comments.map((item: any) => ({
       id: item.id,
       content: item.content,
       release_date: item.releasedate,
       author: {
-        id: item?.id,
-        display_name: item?.nameAuthor,
+        id: item?.idauthor,
+        display_name: item?.nameauthor,
         avatar: item?.avatar ? `http://localhost:8000/api/posi/v1/${item?.avatar}` : null,
       },
     }));

@@ -31,6 +31,7 @@ export class UploadController {
       storage: diskStorage({
         destination: (req, file, cb) => {
           const type = req.body.type;
+          console.log(req.body);
           const uploadPath = `./uploads/${type}`;
           if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
@@ -61,11 +62,11 @@ export class UploadController {
   ): Promise<any> {
     if (!file) throw new BadRequestException('File is missing');
     const userId = req.user['sub'];
-    const imgPath = `public/${uploadDto.type}/${file.filename}`;
+    // const imgPath = `public/${uploadDto.type}/${file.filename}`;
     const image = await this.uploadService.uploadImageToDB({
       imgAuthor: userId,
       imgType: uploadDto.type,
-      imgPath: imgPath,
+      imgPath: file.path,
       imgName: file.filename,
     });
     return {

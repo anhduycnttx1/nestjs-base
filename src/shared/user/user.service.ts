@@ -70,7 +70,7 @@ export class UserService {
   async getUserProfile(userId: string): Promise<any> {
     const author = await this.userRepository
       .createQueryBuilder('user')
-      .where('user.id = :userId', { userId })
+      .where('user.id = :userId', { userId: userId })
       .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaAvatarKey', {
         metaAvatarKey: 'profile_image',
       })
@@ -88,6 +88,7 @@ export class UserService {
         'imageBanner.path as banner',
       ])
       .getRawOne();
+    if (!author) return null;
     return {
       ...author,
       avatar: author?.avatar ? `http://localhost:8000/api/posi/v1/${author?.avatar}` : null,

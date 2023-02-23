@@ -8,9 +8,7 @@ import { Repository } from 'typeorm';
 export class UploadService {
   constructor(
     @InjectRepository(ImageEntity)
-    private readonly imageRepository: Repository<ImageEntity>,
-    @InjectRepository(UserMetaEntity)
-    private readonly userMetaRepository: Repository<UserMetaEntity>
+    private readonly imageRepository: Repository<ImageEntity>
   ) {}
 
   async uploadImageToDB(body: {
@@ -20,10 +18,11 @@ export class UploadService {
     imgName: string;
   }): Promise<ImageEntity> {
     const taxonomy = { user: 'USER_IMAGE', post: 'POST_IMAGE', comment: 'COMMENT_IMAGE' };
+    const pathConver = body.imgPath.split('\\').join('/').replace('uploads/', 'public/');
     const image = new ImageEntity();
     image.authorId = body.imgAuthor;
     image.imgName = body.imgName;
-    image.path = body.imgPath;
+    image.path = pathConver;
     image.taxonomy = taxonomy[body.imgType];
     return await this.imageRepository.save(image);
   }
