@@ -10,7 +10,7 @@ import { UpAvatarDto } from './dto/up-avatar.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get(':id')
+  @Get('view/:id')
   //@UseGuards(JwtAuthGuard)
   async getUserById(@Param('id') id: string): Promise<IFRsp<any>> {
     const data = await this.userService.getUserProfile(id);
@@ -33,6 +33,14 @@ export class UserController {
     const userId = req.user['sub'];
     const data = await this.userService.updateBannerUser({ userId, imageId });
     if (!data) throw new DataNotFoundException(`User id ${imageId} not found`);
+    return { code: 200, message: 'ok', data: data };
+  }
+
+  @Get('photos')
+  @UseGuards(JwtAuthGuard)
+  async getImagesOrderByUser(@Req() req: Request) {
+    const userId = req.user['sub'];
+    const data = await this.userService.getPhotosOrderByUser(userId);
     return { code: 200, message: 'ok', data: data };
   }
 }

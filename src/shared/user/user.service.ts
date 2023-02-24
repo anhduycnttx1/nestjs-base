@@ -120,6 +120,18 @@ export class UserService {
     return await this.userRepository.update(id, newData);
   }
 
+  async getPhotosOrderByUser(userId: string): Promise<any> {
+    const data = await this.imageRepository.find({
+      where: { authorId: String(userId) },
+      select: { id: true, path: true },
+    });
+
+    return data.map((item: ImageEntity) => ({
+      id: item.id,
+      url: item.path ? `http://localhost:8000/api/posi/v1/${item?.path}` : null,
+    }));
+  }
+
   async getTagWithUser(userId: string, tags: string[]): Promise<any> {
     const user = this.userRepository.findOne({ where: { id: userId } });
     console.log(user);
