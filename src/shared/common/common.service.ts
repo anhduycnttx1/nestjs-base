@@ -8,6 +8,7 @@ import { UserMetaEntity } from 'src/entities/user_meta.entity';
 import { appendUrlDomain } from 'src/helper';
 import { PostEntity } from 'src/entities/post.entity';
 import { UserFollowEntity } from './../../entities/user_follow.entity';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class CommonService {
@@ -15,7 +16,8 @@ export class CommonService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(UserFollowEntity)
-    private readonly userFollowRepository: Repository<UserFollowEntity>
+    private readonly userFollowRepository: Repository<UserFollowEntity>,
+    private readonly userService: UserService
   ) {}
 
   async getAuthorComment(commentIds: number[]): Promise<any> {
@@ -81,5 +83,18 @@ export class CommonService {
     follow.type = 'UPVOTE_POST';
     follow.objectId = postId;
     return await this.userFollowRepository.save(follow);
+  }
+
+  async checkIsFollow(userId: number, objectId: number): Promise<boolean> {
+    const user = await this.userService.findUserByWhere({ id: userId });
+    const uFollow = await this.userFollowRepository
+      .createQueryBuilder('fo')
+      .where('fo.userId = :userId', {
+        userId: user.id,
+      })
+      .andWhere('fo.objectId = :objectId', { objectId })
+      .andWhere('fo.type = :type', { type: 'UPVOTE_POST' })
+      .getOne();
+    return uFollow ? true : false;
   }
 }

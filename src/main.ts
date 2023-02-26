@@ -9,7 +9,7 @@ async function bootstrap() {
   app.setGlobalPrefix('/api/posi/v1');
   app.useGlobalPipes(new ValidationPipe());
   // Allow access to static file
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/assets/public' });
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/api/posi/v1/public' });
 
   await app.listen(8000);
 }

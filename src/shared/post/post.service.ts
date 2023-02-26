@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ImageEntity } from 'src/entities/image.entity';
-import { UserEntity } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
 import { IFPageRsq } from './../../types/index';
 import { PostEntity } from 'src/entities/post.entity';
 import { CommentEntity } from './../../entities/comment.entity';
-import { UserMetaEntity } from 'src/entities/user_meta.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UserService } from './../user/user.service';
 import { PostMetaEntity } from './../../entities/post_meta.entity';
@@ -27,7 +25,7 @@ export class PostService {
     private readonly commonSevice: CommonService
   ) {}
 
-  async getPostById(postId: number) {
+  async getPostById(postId: number, userId?: number) {
     const post = await this.postRepository
       .createQueryBuilder('post')
       .where('post.isActive = :isActive AND post.id = :postId', { isActive: true, postId: postId })
@@ -56,6 +54,8 @@ export class PostService {
     const authors = await this.commonSevice.getAuthorPost([postId]);
     if (!post) return null;
     const tags = await this.tagService.findTagsByPostId(post.id);
+    let isUpvote = false;
+    if (userId) isUpvote = await this.commonSevice.checkIsFollow(userId, post.id);
     const result = {
       id: post?.id,
       title: post?.title,
@@ -66,6 +66,7 @@ export class PostService {
       release_date: post?.releasedate,
       author: authors ? authors[post.id] : null,
       tags: tags[0] ? tags.map((item) => ({ name: item.name, slug: item.slug })) : [],
+      isUpvote: isUpvote,
     };
     return result;
   }
@@ -76,6 +77,7 @@ export class PostService {
     order?: string;
     direction?: string;
     title?: string;
+    userId?: number;
   }): Promise<IFPageRsq<any>> {
     const direction = query.direction === 'asc' ? 'DESC' : 'ASC';
     const order = query.order === 'popularity' ? 'post.score' : 'post.createdAt';
@@ -84,16 +86,28 @@ export class PostService {
       .createQueryBuilder('post')
       .where('post.isActive = :isActive', { isActive: true })
       .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', { metaPostKey: 'thumbnail_id' })
-      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)');
-
-    const dataPromis = queryPost
+      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)')
       .select([
         'post.id as id',
         'post.title as title',
         'post.content as content',
         'post.createdAt as releasedate',
         'image.path as path',
-      ])
+      ]);
+    if (query.userId) {
+      queryPost.addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(UserFollowEntity, 'follow')
+          .where('follow.userId = :userId', {
+            userId: query.userId,
+          })
+          .andWhere('follow.objectId = post.id')
+          .andWhere('follow.type = :type', { type: 'UPVOTE_POST' });
+      }, 'isUpvote');
+    }
+
+    const dataPromis = queryPost
       .addSelect((subQuery) => {
         return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
       }, 'commentCount')
@@ -122,6 +136,7 @@ export class PostService {
       image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
       author: authors ? authors[post.id] : null,
+      isUpvote: post?.isUpvote ? (Number(post.isUpvote) > 0 ? true : false) : false,
     }));
     return {
       page_index: query.page,
@@ -138,6 +153,7 @@ export class PostService {
     order?: string;
     direction?: string;
     userId: number;
+    userLogin?: number;
   }): Promise<IFPageRsq<any>> {
     const direction = query.direction === 'asc' ? 'DESC' : 'ASC';
     const order = query.order === 'popularity' ? 'post.score' : 'post.createdAt';
@@ -147,16 +163,28 @@ export class PostService {
       .where('post.isActive = :isActive', { isActive: true })
       .andWhere('post.userId = :userId', { userId: query.userId })
       .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', { metaPostKey: 'thumbnail_id' })
-      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)');
-    // xây các hàm bất đồng bộ lấy dữ liệu
-    const dataPromis = queryPost
+      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)')
       .select([
         'post.id as id',
         'post.title as title',
         'post.content as content',
         'post.createdAt as releasedate',
         'image.path as path',
-      ])
+      ]);
+    // xây các hàm bất đồng bộ lấy dữ liệu
+    if (query.userLogin) {
+      queryPost.addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(UserFollowEntity, 'follow')
+          .where('follow.userId = :userId', {
+            userId: query.userId,
+          })
+          .andWhere('follow.objectId = post.id')
+          .andWhere('follow.type = :type', { type: 'UPVOTE_POST' });
+      }, 'isUpvote');
+    }
+    const dataPromis = queryPost
       .addSelect((subQuery) => {
         return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
       }, 'commentCount')
@@ -185,6 +213,7 @@ export class PostService {
       image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
       author: authors ? authors[post.id] : null,
+      isUpvote: post?.isUpvote ? (Number(post.isUpvote) > 0 ? true : false) : false,
     }));
     return {
       page_index: query.page,

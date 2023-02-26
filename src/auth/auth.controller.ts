@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { IFRsp, IFToken } from 'src/types';
-import { JwtAuthGuard, RefreshAuthGuard } from './auth.guard';
+import { JwtAuthGuard } from './auth.guard';
 import { SignupDto } from './dto/signup.dto';
 
 @Controller('auth')

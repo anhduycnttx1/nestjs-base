@@ -1,5 +1,5 @@
 export function appendUrlDomain(path: string): string {
-  return `http://localhost:8000/assets/public/${path}`;
+  return `http://localhost:8000/api/posi/v1/${path}`;
 }
 
 export function isNumberInput(value: string | number): boolean {
