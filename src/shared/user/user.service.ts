@@ -101,6 +101,7 @@ export class UserService {
       banner: author?.banner ? appendUrlDomain(author?.banner) : null,
     };
   }
+
   async getAuthorLogin(userId: number): Promise<any> {
     const author = await this.userRepository
       .createQueryBuilder('user')
@@ -117,6 +118,7 @@ export class UserService {
       .getRawOne();
     return { ...author, avatar: author?.path ? appendUrlDomain(author?.path) : null };
   }
+
   async findUserByWhere(where: any): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: where });
     return user;
@@ -138,7 +140,6 @@ export class UserService {
   }
 
   async setTagWithUser(userId: number, tags: string[]): Promise<any> {
-    console.log(tags);
     const user = await this.findUserByWhere({ id: userId });
     const tagEntities = await Promise.all(
       tags.map(async (tagName) => {

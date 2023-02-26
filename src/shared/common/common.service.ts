@@ -7,12 +7,15 @@ import { ImageEntity } from 'src/entities/image.entity';
 import { UserMetaEntity } from 'src/entities/user_meta.entity';
 import { appendUrlDomain } from 'src/helper';
 import { PostEntity } from 'src/entities/post.entity';
+import { UserFollowEntity } from './../../entities/user_follow.entity';
 
 @Injectable()
 export class CommonService {
   constructor(
     @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>
+    private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(UserFollowEntity)
+    private readonly userFollowRepository: Repository<UserFollowEntity>
   ) {}
 
   async getAuthorComment(commentIds: number[]): Promise<any> {
@@ -69,5 +72,14 @@ export class CommonService {
       };
     });
     return result;
+  }
+
+  async setUserUpvotePost(userId: number, postId: number) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const follow = new UserFollowEntity();
+    follow.user = user;
+    follow.type = 'UPVOTE_POST';
+    follow.objectId = postId;
+    return await this.userFollowRepository.save(follow);
   }
 }
