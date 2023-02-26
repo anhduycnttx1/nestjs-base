@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 export class PostController {
   constructor(private readonly postService: PostService, private readonly jwtService: JwtService) {}
 
-  @Get('posts')
+  @Post('posts')
   async getPostList(@Query() query: any, @Body('token') token: string): Promise<IFRsp<any>> {
     const page = Number(query['page-index']) || 1;
     const perPage = Number(query['page-size']) || 20;
@@ -40,7 +40,7 @@ export class PostController {
 
     return { code: 200, message: 'ok', data: result };
   }
-  @Get('posts/user/:userId')
+  @Post('posts/user/:userId')
   async getPostListByUser(
     @Query() query: any,
     @Param('userId') userId: number,
@@ -74,7 +74,7 @@ export class PostController {
     return { code: 200, message: 'ok', data: result };
   }
 
-  @Get('post/:postId')
+  @Post('post/:postId')
   async getPostDetail(@Param('postId') postId: number, @Body('token') token: string): Promise<IFRsp<any>> {
     let result = null;
     try {

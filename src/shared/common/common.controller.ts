@@ -12,7 +12,7 @@ export class CommonController {
   @UseGuards(JwtAuthGuard)
   async createPost(@Param('postId') postId: number, @Req() req: Request): Promise<IFRsp<any>> {
     const userId = req.user['sub'];
-    await this.conmonService.setUserUpvotePost(userId, postId);
+    await this.conmonService.setUserUpvotePost(userId, Number(postId));
     return { code: 200, message: 'ok' };
   }
 }

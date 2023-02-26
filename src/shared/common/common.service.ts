@@ -78,11 +78,28 @@ export class CommonService {
 
   async setUserUpvotePost(userId: number, postId: number) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    const follow = new UserFollowEntity();
-    follow.user = user;
-    follow.type = 'UPVOTE_POST';
-    follow.objectId = postId;
-    return await this.userFollowRepository.save(follow);
+    const uFollow = await this.userFollowRepository
+      .createQueryBuilder('fo')
+      .where('fo.userId = :userId', {
+        userId: user.id,
+      })
+      .andWhere('fo.objectId = :objectId', { objectId: postId })
+      .andWhere('fo.type = :type', { type: 'UPVOTE_POST' })
+      .getOne();
+    console.log(uFollow);
+    if (!uFollow) {
+      const follow = new UserFollowEntity();
+      follow.user = user;
+      follow.type = 'UPVOTE_POST';
+      follow.objectId = postId;
+      return await this.userFollowRepository.save(follow);
+    }
+    return await this.userFollowRepository
+      .createQueryBuilder('users')
+      .delete()
+      .from(UserFollowEntity)
+      .where('id = :id', { id: uFollow.id })
+      .execute();
   }
 
   async checkIsFollow(userId: number, objectId: number): Promise<boolean> {
