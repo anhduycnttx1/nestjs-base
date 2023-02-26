@@ -145,6 +145,7 @@ export class UserService {
   }
 
   async setTagWithUser(userId: number, tags: string[]): Promise<any> {
+    if (!tags[0]) return [];
     const user = await this.findUserByWhere({ id: userId });
     const tagEntities = await Promise.all(
       tags.map(async (tagName) => {

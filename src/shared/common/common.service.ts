@@ -17,6 +17,8 @@ export class CommonService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(UserFollowEntity)
     private readonly userFollowRepository: Repository<UserFollowEntity>,
+    @InjectRepository(PostEntity)
+    private readonly postRepository: Repository<PostEntity>,
     private readonly userService: UserService
   ) {}
 
@@ -86,8 +88,13 @@ export class CommonService {
       .andWhere('fo.objectId = :objectId', { objectId: postId })
       .andWhere('fo.type = :type', { type: 'UPVOTE_POST' })
       .getOne();
-    console.log(uFollow);
     if (!uFollow) {
+      const post = await this.postRepository.findOne({ where: { id: postId }, relations: { tags: true } });
+      const tags = post.tags;
+      await this.userService.setTagWithUser(
+        userId,
+        tags.map((tag) => tag.name)
+      );
       const follow = new UserFollowEntity();
       follow.user = user;
       follow.type = 'UPVOTE_POST';
