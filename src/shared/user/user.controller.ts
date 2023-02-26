@@ -12,7 +12,7 @@ export class UserController {
 
   @Get('view/:id')
   //@UseGuards(JwtAuthGuard)
-  async getUserById(@Param('id') id: number): Promise<IFRsp<any>> {
+  async getUserById(@Param('id') id: string): Promise<IFRsp<any>> {
     const data = await this.userService.getUserProfile(id);
     if (!data) throw new DataNotFoundException(`User id ${id} not found`);
     return { code: 200, message: 'ok', data: data };

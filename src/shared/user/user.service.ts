@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity';
 import { UserMetaEntity } from 'src/entities/user_meta.entity';
 import { ImageEntity } from 'src/entities/image.entity';
-import { appendUrlDomain } from './../../helper/index';
+import { appendUrlDomain, isNumberInput } from './../../helper/index';
 import { TagService } from './../tags/tag.service';
 import { UserTagRelationshipsEntity } from 'src/entities/user_tags_relationships';
 
@@ -73,18 +73,23 @@ export class UserService {
     return { mid: metaCreate.id };
   }
 
-  async getUserProfile(userId: number): Promise<any> {
-    const author = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.id = :userId', { userId: userId })
+  async getUserProfile(input: number | string): Promise<any> {
+    const isInput = isNumberInput(input);
+    const authorQuery = this.userRepository.createQueryBuilder('user');
+    if (isInput) authorQuery.where('user.id = :userId', { userId: input });
+    else authorQuery.where('user.userName = :userName', { userName: input });
+
+    authorQuery
       .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaAvatarKey', {
         metaAvatarKey: 'profile_image',
       })
-      .leftJoin(ImageEntity, 'imageAvatar', 'imageAvatar.id = um.metaValue')
+      .leftJoin(ImageEntity, 'imageAvatar', 'imageAvatar.id = CAST(um.metaValue AS int)')
       .leftJoin(UserMetaEntity, 'um2', 'um2.user = user.id AND um2.metaKey = :metaBannerKey', {
         metaBannerKey: 'profile_banner',
       })
-      .leftJoin(ImageEntity, 'imageBanner', 'imageBanner.id = um2.metaValue')
+      .leftJoin(ImageEntity, 'imageBanner', 'imageBanner.id = CAST(um2.metaValue AS int)');
+
+    const author = await authorQuery
       .select([
         'user.id as id',
         'user.userName as username',
