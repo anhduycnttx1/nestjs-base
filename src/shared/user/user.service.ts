@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity';
 import { UserMetaEntity } from 'src/entities/user_meta.entity';
 import { ImageEntity } from 'src/entities/image.entity';
+import { appendUrlDomain } from './../../helper/index';
+import { TagService } from './../tags/tag.service';
+import { UserTagRelationshipsEntity } from 'src/entities/user_tags_relationships';
 
 @Injectable()
 export class UserService {
@@ -13,7 +16,8 @@ export class UserService {
     @InjectRepository(UserMetaEntity)
     private readonly userMetaRepository: Repository<UserMetaEntity>,
     @InjectRepository(ImageEntity)
-    private readonly imageRepository: Repository<ImageEntity>
+    private readonly imageRepository: Repository<ImageEntity>,
+    private readonly tagService: TagService
   ) {}
 
   async createUser(data: any): Promise<UserEntity> {
@@ -27,7 +31,7 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async updateAvatarUser(body: { userId: string; imageId: string }): Promise<any> {
+  async updateAvatarUser(body: { userId: number; imageId: number }): Promise<any> {
     const user = await this.userRepository.findOne({ where: { id: body.userId } });
     if (!user) return null;
     const image = await this.imageRepository.findOne({ where: { id: body.imageId } });
@@ -36,18 +40,18 @@ export class UserService {
       where: { metaKey: 'profile_image', user: { id: body.userId } },
     });
     if (metafind) {
-      await this.userMetaRepository.update({ id: metafind.id }, { metaValue: image.id });
+      await this.userMetaRepository.update({ id: metafind.id }, { metaValue: image.id.toString() });
       return { mid: metafind.id };
     }
     const meta = new UserMetaEntity();
     meta.user = user;
     meta.metaKey = 'profile_image';
-    meta.metaValue = image.id;
+    meta.metaValue = image.id.toString();
     const metaCreate = await this.userMetaRepository.save(meta);
     return { mid: metaCreate.id };
   }
 
-  async updateBannerUser(body: { userId: string; imageId: string }): Promise<any> {
+  async updateBannerUser(body: { userId: number; imageId: number }): Promise<any> {
     const user = await this.userRepository.findOne({ where: { id: body.userId } });
     if (!user) return null;
     const image = await this.imageRepository.findOne({ where: { id: body.imageId } });
@@ -56,18 +60,18 @@ export class UserService {
       where: { metaKey: 'profile_banner', user: { id: body.userId } },
     });
     if (metafind) {
-      await this.userMetaRepository.update({ id: metafind.id }, { metaValue: image.id });
+      await this.userMetaRepository.update({ id: metafind.id }, { metaValue: image.id.toString() });
       return { mid: metafind.id };
     }
     const meta = new UserMetaEntity();
     meta.user = user;
     meta.metaKey = 'profile_banner';
-    meta.metaValue = image.id;
+    meta.metaValue = image.id.toString();
     const metaCreate = await this.userMetaRepository.save(meta);
     return { mid: metaCreate.id };
   }
 
-  async getUserProfile(userId: string): Promise<any> {
+  async getUserProfile(userId: number): Promise<any> {
     const author = await this.userRepository
       .createQueryBuilder('user')
       .where('user.id = :userId', { userId: userId })
@@ -91,11 +95,11 @@ export class UserService {
     if (!author) return null;
     return {
       ...author,
-      avatar: author?.avatar ? `http://localhost:8000/api/posi/v1/${author?.avatar}` : null,
-      banner: author?.banner ? `http://localhost:8000/api/posi/v1/${author?.banner}` : null,
+      avatar: author?.avatar ? appendUrlDomain(author?.avatar) : null,
+      banner: author?.banner ? appendUrlDomain(author?.banner) : null,
     };
   }
-  async getAuthorLogin(userId: string): Promise<any> {
+  async getAuthorLogin(userId: number): Promise<any> {
     const author = await this.userRepository
       .createQueryBuilder('user')
       .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaKey', { metaKey: 'profile_image' })
@@ -109,32 +113,54 @@ export class UserService {
         'image.path as path',
       ])
       .getRawOne();
-    return { ...author, avatar: author?.path ? `http://localhost:8000/api/posi/v1/${author?.path}` : null };
+    return { ...author, avatar: author?.path ? appendUrlDomain(author?.path) : null };
   }
   async findUserByWhere(where: any): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: where });
     return user;
   }
 
-  async updateUser(id: string, newData: Partial<UserEntity>): Promise<any> {
-    return await this.userRepository.update(id, newData);
-  }
-
-  async getPhotosOrderByUser(userId: string): Promise<any> {
+  async getPhotosOrderByUser(userId: number): Promise<any> {
     const data = await this.imageRepository.find({
-      where: { authorId: String(userId) },
+      where: { authorId: userId },
       select: { id: true, path: true },
     });
-
     return data.map((item: ImageEntity) => ({
       id: item.id,
-      url: item.path ? `http://localhost:8000/api/posi/v1/${item?.path}` : null,
+      url: item.path ? appendUrlDomain(item?.path) : null,
     }));
   }
 
-  async getTagWithUser(userId: string, tags: string[]): Promise<any> {
-    const user = this.userRepository.findOne({ where: { id: userId } });
-    console.log(user);
-    return 'done';
+  async setTagWithUser(userId: number, tags: string[]): Promise<any> {
+    const user = await this.findUserByWhere({ id: userId });
+    const tagEntities = await Promise.all(
+      tags.map(async (tagName) => {
+        const slug = tagName.slice(1);
+        let tag = await this.tagService.findTagBySlug(slug);
+        if (!tag) {
+          tag = await this.tagService.createTagByName(tagName);
+        }
+        return tag;
+      })
+    );
+    const tagRelations = (await this.tagService.getTagRelationshipByUser(user)) || [];
+    const tagRelationMap = new Map(tagRelations.map((relation) => [relation.tag.id, relation]));
+
+    tagEntities.forEach((tag) => {
+      if (tagRelationMap.has(tag.id)) {
+        const relation = tagRelationMap.get(tag.id);
+        relation.score++;
+      } else {
+        const relation = new UserTagRelationshipsEntity();
+        relation.user = user;
+        relation.tag = tag;
+        relation.score = 1;
+        tagRelationMap.set(tag.id, relation);
+        tagRelations.push(relation);
+      }
+    });
+
+    user.tags = tagEntities;
+    return await this.userRepository.save(user);
   }
 }

@@ -9,7 +9,7 @@ import { TagEntity } from './tag.entity';
 import { PostMetaEntity } from './post_meta.entity';
 import { UserMetaEntity } from './user_meta.entity';
 import { UserTagRelationshipsEntity } from './user_tags_relationships';
-
+import { UserFollowEntity } from './user_follow.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -22,6 +22,7 @@ import { UserTagRelationshipsEntity } from './user_tags_relationships';
       PostMetaEntity,
       UserMetaEntity,
       UserTagRelationshipsEntity,
+      UserFollowEntity,
     ]),
   ],
   exports: [
@@ -35,6 +36,7 @@ import { UserTagRelationshipsEntity } from './user_tags_relationships';
       PostMetaEntity,
       UserMetaEntity,
       UserTagRelationshipsEntity,
+      UserFollowEntity,
     ]),
   ],
 })

@@ -10,7 +10,7 @@ export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
   @Get(':postId')
-  async getCommentByPost(@Param('postId') postId: string): Promise<IFRsp<any>> {
+  async getCommentByPost(@Param('postId') postId: number): Promise<IFRsp<any>> {
     const result = await this.commentService.getCommentByPostId(postId);
     //if (!result) throw new DataNotFoundException(`Post id ${postId} not found`);
     return { code: 200, message: 'ok', data: result };
@@ -19,7 +19,7 @@ export class CommentController {
   @Post(':postId')
   @UseGuards(JwtAuthGuard)
   async SetCommentToPost(
-    @Param('postId') postId: string,
+    @Param('postId') postId: number,
     @Body() body: CommentDto,
     @Req() req: Request
   ): Promise<IFRsp<any>> {

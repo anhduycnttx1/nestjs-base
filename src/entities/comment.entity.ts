@@ -11,16 +11,16 @@ import {
 import { PostEntity } from './post.entity';
 import { CommentMetaEntity } from './comment_meta.entity';
 
-@Entity()
+@Entity({ name: 'comment' })
 export class CommentEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   content: string;
 
   @Column()
-  userId: string;
+  userId: number;
 
   @Column({ default: true })
   isActive: boolean;

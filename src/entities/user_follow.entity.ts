@@ -10,20 +10,20 @@ import {
 
 import { UserEntity } from './user.entity';
 
-@Entity({ name: 'user_meta' })
-export class UserMetaEntity {
+@Entity({ name: 'user_follow' })
+export class UserFollowEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => UserEntity, (user) => user.metas)
+  @ManyToOne(() => UserEntity, (user) => user.follows)
   @JoinColumn()
   user: UserEntity;
 
   @Column()
-  metaKey: string;
+  type: string;
 
   @Column()
-  metaValue: string;
+  objectId: number;
 
   @CreateDateColumn()
   createdAt: Date;

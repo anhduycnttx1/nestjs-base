@@ -2,10 +2,10 @@ import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 't
 import { UserEntity } from './user.entity';
 import { TagEntity } from 'src/entities/tag.entity';
 
-@Entity()
+@Entity({ name: 'user_tag_relationship' })
 export class UserTagRelationshipsEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ default: 0 })
   score: number;

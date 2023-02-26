@@ -10,10 +10,10 @@ import {
 
 import { CommentEntity } from './comment.entity';
 
-@Entity()
+@Entity({ name: 'comment_meta' })
 export class CommentMetaEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @ManyToOne(() => CommentEntity, (comment) => comment.metas)
   @JoinColumn()

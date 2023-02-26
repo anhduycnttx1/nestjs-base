@@ -1,15 +1,15 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity()
+@Entity({ name: 'image' })
 export class ImageEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   taxonomy: string;
 
   @Column()
-  authorId: string;
+  authorId: number;
 
   @Column()
   path: string;

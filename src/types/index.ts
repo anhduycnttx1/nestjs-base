@@ -4,7 +4,7 @@ export interface IFToken {
 }
 
 export interface IFAuthInfo {
-  id: string;
+  id: number;
   display_name: string;
   avatar: Url;
 }
@@ -26,7 +26,7 @@ export interface IFPageRsq<Type> {
 }
 
 export interface IFPostList {
-  id: string;
+  id: number;
   title: string;
   preview: Url;
   countLike: number;
@@ -36,7 +36,7 @@ export interface IFPostList {
 }
 
 export interface IFPostView {
-  id: string;
+  id: number;
   title: string;
   content: string;
   countLike: number;
@@ -47,7 +47,7 @@ export interface IFPostView {
 }
 
 export interface IFCommentList {
-  id: string;
+  id: number;
   content: string;
   image: Url;
   release_date: Date;

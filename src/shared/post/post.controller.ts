@@ -27,7 +27,7 @@ export class PostController {
     return { code: 200, message: 'ok', data: data };
   }
   @Get('posts/user/:userId')
-  async getPostListByUser(@Query() query: any, @Param('userId') userId: string): Promise<IFRsp<any>> {
+  async getPostListByUser(@Query() query: any, @Param('userId') userId: number): Promise<IFRsp<any>> {
     const page = Number(query['page-index']) || 1;
     const perPage = Number(query['page-size']) || 20;
     const order = query['order'] || '';
@@ -43,7 +43,7 @@ export class PostController {
   }
 
   @Get('post/:postId')
-  async getPostDetail(@Param('postId') postId: string): Promise<IFRsp<any>> {
+  async getPostDetail(@Param('postId') postId: number): Promise<IFRsp<any>> {
     const result = await this.postService.getPostById(postId);
     if (!result) throw new DataNotFoundException(`Post id ${postId} not found`);
     return { code: 200, message: 'ok', data: result };

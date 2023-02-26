@@ -11,15 +11,13 @@ import {
 
 import { PostEntity } from './post.entity';
 import { UserMetaEntity } from './user_meta.entity';
-
-import { UserTagRelationshipsEntity } from './user_tags_relationships';
 import { TagEntity } from './tag.entity';
-// import { UserTagRelationshipsEntity } from './user_tags_relationships';
+import { UserFollowEntity } from './user_follow.entity';
 
-@Entity()
+@Entity({ name: 'user' })
 export class UserEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ unique: true })
   userName: string;
@@ -52,12 +50,13 @@ export class UserEntity {
     inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
   })
   tags: TagEntity[];
-  // @OneToMany(() => UserTagRelationshipsEntity, (relation) => relation.user)
-  // userTags: UserTagRelationshipsEntity[];
 
   @OneToMany(() => PostEntity, (post) => post.user)
   posts: PostEntity[];
 
   @OneToMany(() => UserMetaEntity, (meta) => meta.user)
   metas: UserMetaEntity[];
+
+  @OneToMany(() => UserFollowEntity, (follow) => follow.user)
+  follows: UserFollowEntity[];
 }

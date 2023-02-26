@@ -11,7 +11,7 @@ export class UploadService {
   ) {}
 
   async uploadImageToDB(body: {
-    imgAuthor: string;
+    imgAuthor: number;
     imgType: string;
     imgPath: string;
     imgName: string;

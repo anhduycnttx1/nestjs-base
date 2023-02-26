@@ -14,10 +14,10 @@ import { UserEntity } from './user.entity';
 import { PostMetaEntity } from './post_meta.entity';
 import { TagEntity } from './tag.entity';
 
-@Entity()
+@Entity({ name: 'post' })
 export class PostEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   title: string;
@@ -30,9 +30,6 @@ export class PostEntity {
 
   @Column({ default: 0 })
   score: number;
-
-  @Column({ default: 0 })
-  countLike: number;
 
   @CreateDateColumn()
   createdAt: Date;

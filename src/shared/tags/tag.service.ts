@@ -2,32 +2,36 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TagEntity } from 'src/entities/tag.entity';
 import { Repository } from 'typeorm';
+import { UserTagRelationshipsEntity } from './../../entities/user_tags_relationships';
+import { UserEntity } from 'src/entities/user.entity';
 
 @Injectable()
 export class TagService {
   constructor(
     @InjectRepository(TagEntity)
-    private readonly tagRepository: Repository<TagEntity>
+    private readonly tagRepository: Repository<TagEntity>,
+    @InjectRepository(UserTagRelationshipsEntity)
+    private readonly tagRelationshipRepository: Repository<UserTagRelationshipsEntity>
   ) {}
 
   async getTagBySlug(slug: string): Promise<TagEntity> {
     return await this.tagRepository.findOne({ where: { slug } });
   }
 
-  async createNewTag(tag: TagEntity): Promise<TagEntity> {
+  async createTagByName(name: string): Promise<TagEntity> {
+    const tag = new TagEntity();
+    tag.name = name;
+    tag.slug = name.slice(1);
     return await this.tagRepository.save(tag);
   }
 
-  async getTagEntityByArrSlug(tags: string[] | null): Promise<any> {
+  async setTagEntityByArrSlug(tags: string[] | null): Promise<any> {
     const entitys = [];
     if (!tags) return entitys;
     for (const nameTag of tags) {
       const tagOld = await this.getTagBySlug(nameTag.slice(1));
       if (!tagOld) {
-        const tag = new TagEntity();
-        tag.name = nameTag;
-        tag.slug = nameTag.slice(1);
-        const newTag = await this.createNewTag(tag);
+        const newTag = await this.createTagByName(nameTag);
         entitys.push(newTag);
       } else entitys.push(tagOld);
     }
@@ -41,5 +45,18 @@ export class TagService {
       .where('ptr.postEntityId = :postId', { postId: postId })
       .getMany();
     return tags;
+  }
+
+  async findTagBySlug(slug: string): Promise<TagEntity> {
+    const tags = await this.tagRepository.findOne({
+      where: {
+        slug: slug,
+      },
+    });
+    return tags;
+  }
+
+  async getTagRelationshipByUser(user: UserEntity): Promise<UserTagRelationshipsEntity[]> {
+    return await this.tagRelationshipRepository.find({ where: { user: user } });
   }
 }

@@ -50,7 +50,7 @@ export class AuthService {
     return token;
   }
 
-  async logout(id: string) {
+  async logout(id: number) {
     const user = await this.userService.findUserByWhere({ id: id });
     await this.userService.updateUser(user.id, { hashRefresh: null });
     return 'logout';
@@ -66,13 +66,13 @@ export class AuthService {
     return token;
   }
 
-  async validateUser(id: string) {
+  async validateUser(id: number) {
     const user = await this.userService.findUserByWhere({ id: id });
     if (!user) return null;
     return user;
   }
 
-  async getMe(id: string) {
+  async getMe(id: number) {
     const user = await this.userService.getAuthorLogin(id);
     if (!user) return null;
     return user;

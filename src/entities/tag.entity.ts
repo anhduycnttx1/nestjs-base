@@ -11,10 +11,10 @@ import { PostEntity } from './post.entity';
 import { UserTagRelationshipsEntity } from './user_tags_relationships';
 import { UserEntity } from './user.entity';
 
-@Entity()
+@Entity({ name: 'tags' })
 export class TagEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   name: string;

@@ -11,6 +11,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UserService } from './../user/user.service';
 import { PostMetaEntity } from './../../entities/post_meta.entity';
 import { TagService } from '../tags/tag.service';
+import { appendUrlDomain } from './../../helper/index';
 
 @Injectable()
 export class PostService {
@@ -23,7 +24,7 @@ export class PostService {
     private readonly tagService: TagService
   ) {}
 
-  async getPostById(postId: string) {
+  async getPostById(postId: number) {
     const post = await this.postRepository
       .createQueryBuilder('post')
       .where('post.isActive = :isActive AND post.id = :postId', { isActive: true, postId: postId })
@@ -57,12 +58,12 @@ export class PostService {
       content: post?.content,
       countLike: post?.countlike,
       countComment: Number(post?.commentCount),
-      image: post?.path ? `http://localhost:8000/api/posi/v1/${post?.path}` : null,
+      image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
       author: {
         id: post?.idauthor,
         display_name: post?.nameauthor,
-        avatar: post?.imageauthor ? `http://localhost:8000/api/posi/v1/${post?.imageauthor}` : null,
+        avatar: post?.imageauthor ? appendUrlDomain(post?.imageauthor) : null,
       },
       tags: tags[0] ? tags.map((item) => ({ name: item.name, slug: item.slug })) : [],
     };
@@ -116,12 +117,12 @@ export class PostService {
       title: post?.title,
       countLike: post?.countlike,
       countComment: Number(post?.commentCount),
-      image: post?.path ? `http://localhost:8000/api/posi/v1/${post?.path}` : null,
+      image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
       author: {
         id: post?.idauthor,
         display_name: post?.nameauthor,
-        avatar: post?.imageauthor ? `http://localhost:8000/api/posi/v1/${post?.imageauthor}` : null,
+        avatar: post?.imageauthor ? appendUrlDomain(post?.imageauthor) : null,
       },
     }));
     return {
@@ -138,7 +139,7 @@ export class PostService {
     perPage?: number;
     order?: string;
     direction?: string;
-    userId: string;
+    userId: number;
   }): Promise<IFPageRsq<any>> {
     const direction = query.direction === 'asc' ? 'DESC' : 'ASC';
     const order = query.order === 'popularity' ? 'post.score' : 'post.createdAt';
@@ -181,12 +182,12 @@ export class PostService {
       title: post?.title,
       countLike: post?.countlike,
       countComment: post?.commentCount ? Number(post?.commentCount) : 0,
-      image: post?.path ? `http://localhost:8000/api/posi/v1/${post?.path}` : null,
+      image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
       author: {
         id: post?.idauthor,
         display_name: post?.nameauthor,
-        avatar: post?.imageauthor ? `http://localhost:8000/api/posi/v1/${post?.imageauthor}` : null,
+        avatar: post?.imageauthor ? appendUrlDomain(post?.imageauthor) : null,
       },
     }));
     return {
@@ -206,17 +207,18 @@ export class PostService {
     post.user = user;
     post.title = body.title;
     post.content = body.content;
-    post.tags = await await this.tagService.getTagEntityByArrSlug(tags);
+    post.tags = await this.tagService.setTagEntityByArrSlug(tags);
     const postNew = await this.postRepository.save(post);
     //Tạo meta cho post
     if (body.imageId) {
       const meta = new PostMetaEntity();
       meta.post = postNew;
       meta.metaKey = 'thumbnail_id';
-      meta.metaValue = body.imageId || '';
+      meta.metaValue = body.imageId.toString() || '';
       await this.postMetaRepository.save(meta);
     }
-    //Tạo tags với post
+    //Gán tas cho user tạo
+    await this.userService.setTagWithUser(user.id, tags);
     return await this.getPostById(postNew.id);
   }
 }

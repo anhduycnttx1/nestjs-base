@@ -6,7 +6,7 @@ export class CreatePostDto {
 
   content: string;
 
-  imageId: string;
+  imageId: number;
 
   tags: string;
 }

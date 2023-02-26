@@ -10,10 +10,10 @@ import {
 
 import { PostEntity } from './post.entity';
 
-@Entity()
+@Entity({ name: 'post_meta' })
 export class PostMetaEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @ManyToOne(() => PostEntity, (post) => post.metas)
   @JoinColumn()
