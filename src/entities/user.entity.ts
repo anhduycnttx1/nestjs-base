@@ -7,6 +7,7 @@ import {
   OneToMany,
   JoinTable,
   ManyToMany,
+  JoinColumn,
 } from 'typeorm';
 
 import { PostEntity } from './post.entity';
@@ -49,6 +50,8 @@ export class UserEntity {
     joinColumn: { name: 'userId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
   })
+  @JoinColumn({ name: 'score', referencedColumnName: 'score' })
+  score: number;
   tags: TagEntity[];
 
   @OneToMany(() => PostEntity, (post) => post.user)

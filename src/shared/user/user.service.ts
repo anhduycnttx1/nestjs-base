@@ -17,6 +17,8 @@ export class UserService {
     private readonly userMetaRepository: Repository<UserMetaEntity>,
     @InjectRepository(ImageEntity)
     private readonly imageRepository: Repository<ImageEntity>,
+    @InjectRepository(UserTagRelationshipsEntity)
+    private readonly userTagRelationshipRepository: Repository<UserTagRelationshipsEntity>,
     private readonly tagService: TagService
   ) {}
 
@@ -78,11 +80,11 @@ export class UserService {
       .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaAvatarKey', {
         metaAvatarKey: 'profile_image',
       })
-      .leftJoin(ImageEntity, 'imageAvatar', 'imageAvatar.id = uuid(um.metaValue)')
+      .leftJoin(ImageEntity, 'imageAvatar', 'imageAvatar.id = um.metaValue')
       .leftJoin(UserMetaEntity, 'um2', 'um2.user = user.id AND um2.metaKey = :metaBannerKey', {
         metaBannerKey: 'profile_banner',
       })
-      .leftJoin(ImageEntity, 'imageBanner', 'imageBanner.id = uuid(um2.metaValue)')
+      .leftJoin(ImageEntity, 'imageBanner', 'imageBanner.id = um2.metaValue')
       .select([
         'user.id as id',
         'user.userName as username',
@@ -104,7 +106,7 @@ export class UserService {
       .createQueryBuilder('user')
       .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaKey', { metaKey: 'profile_image' })
       .where('user.id = :userId', { userId })
-      .leftJoin(ImageEntity, 'image', 'image.id = uuid(um.metaValue)')
+      .leftJoin(ImageEntity, 'image', 'image.id = CAST(um.metaValue AS int)')
       .select([
         'user.id as id',
         'user.userName as username',
@@ -131,7 +133,12 @@ export class UserService {
     }));
   }
 
+  async updateUser(userId: number, newData: Partial<UserEntity>): Promise<any> {
+    return await this.userRepository.update(userId, newData);
+  }
+
   async setTagWithUser(userId: number, tags: string[]): Promise<any> {
+    console.log(tags);
     const user = await this.findUserByWhere({ id: userId });
     const tagEntities = await Promise.all(
       tags.map(async (tagName) => {
@@ -144,23 +151,21 @@ export class UserService {
       })
     );
     const tagRelations = (await this.tagService.getTagRelationshipByUser(user)) || [];
-    const tagRelationMap = new Map(tagRelations.map((relation) => [relation.tag.id, relation]));
-
-    tagEntities.forEach((tag) => {
+    const tagRelationMap = new Map(tagRelations.map((relation) => [relation.tagId, relation]));
+    for (const tag of tagEntities) {
       if (tagRelationMap.has(tag.id)) {
         const relation = tagRelationMap.get(tag.id);
-        relation.score++;
+        const score = relation.score + Math.floor(Math.random() * 3) + 2;
+        await this.userTagRelationshipRepository.update(relation, { score });
       } else {
         const relation = new UserTagRelationshipsEntity();
-        relation.user = user;
-        relation.tag = tag;
-        relation.score = 1;
-        tagRelationMap.set(tag.id, relation);
-        tagRelations.push(relation);
+        relation.userId = user.id;
+        relation.tagId = tag.id;
+        relation.score = Math.floor(Math.random() * 3) + 2;
+        await this.userTagRelationshipRepository.save(relation);
       }
-    });
+    }
 
-    user.tags = tagEntities;
-    return await this.userRepository.save(user);
+    return tagRelationMap;
   }
 }

@@ -10,7 +10,7 @@ import {
 
 import { PostEntity } from './post.entity';
 
-@Entity({ name: 'post_meta' })
+@Entity()
 export class PostMetaEntity {
   @PrimaryGeneratedColumn()
   id: number;

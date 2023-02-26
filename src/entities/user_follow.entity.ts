@@ -10,7 +10,7 @@ import {
 
 import { UserEntity } from './user.entity';
 
-@Entity({ name: 'user_follow' })
+@Entity()
 export class UserFollowEntity {
   @PrimaryGeneratedColumn()
   id: number;

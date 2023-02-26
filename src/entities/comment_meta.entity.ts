@@ -10,7 +10,7 @@ import {
 
 import { CommentEntity } from './comment.entity';
 
-@Entity({ name: 'comment_meta' })
+@Entity()
 export class CommentMetaEntity {
   @PrimaryGeneratedColumn()
   id: number;

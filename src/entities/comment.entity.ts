@@ -11,7 +11,7 @@ import {
 import { PostEntity } from './post.entity';
 import { CommentMetaEntity } from './comment_meta.entity';
 
-@Entity({ name: 'comment' })
+@Entity()
 export class CommentEntity {
   @PrimaryGeneratedColumn()
   id: number;

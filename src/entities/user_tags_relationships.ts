@@ -1,20 +1,16 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { UserEntity } from './user.entity';
-import { TagEntity } from 'src/entities/tag.entity';
+import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity({ name: 'user_tag_relationship' })
+@Entity({ name: 'user_tags_relationships' })
 export class UserTagRelationshipsEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ default: 0 })
+  @PrimaryColumn()
+  userId: number;
+
+  @PrimaryColumn()
+  tagId: number;
+
+  @Column({ default: 1 })
   score: number;
-
-  @ManyToOne(() => UserEntity, (user) => user.tags)
-  @JoinColumn({ name: 'userId' })
-  user: UserEntity;
-
-  @ManyToOne(() => TagEntity, (tag) => tag.userFollow)
-  @JoinColumn({ name: 'tagId' })
-  tag: TagEntity;
 }

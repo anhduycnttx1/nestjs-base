@@ -14,7 +14,7 @@ import { UserEntity } from './user.entity';
 import { PostMetaEntity } from './post_meta.entity';
 import { TagEntity } from './tag.entity';
 
-@Entity({ name: 'post' })
+@Entity()
 export class PostEntity {
   @PrimaryGeneratedColumn()
   id: number;

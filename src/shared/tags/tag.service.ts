@@ -57,6 +57,6 @@ export class TagService {
   }
 
   async getTagRelationshipByUser(user: UserEntity): Promise<UserTagRelationshipsEntity[]> {
-    return await this.tagRelationshipRepository.find({ where: { user: user } });
+    return await this.tagRelationshipRepository.find({ where: { userId: user.id } });
   }
 }

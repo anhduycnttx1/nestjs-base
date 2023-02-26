@@ -12,6 +12,8 @@ import { UserService } from './../user/user.service';
 import { PostMetaEntity } from './../../entities/post_meta.entity';
 import { TagService } from '../tags/tag.service';
 import { appendUrlDomain } from './../../helper/index';
+import { UserFollowEntity } from 'src/entities/user_follow.entity';
+import { CommonService } from './../common/common.service';
 
 @Injectable()
 export class PostService {
@@ -21,7 +23,8 @@ export class PostService {
     @InjectRepository(PostMetaEntity)
     private readonly postMetaRepository: Repository<PostMetaEntity>,
     private readonly userService: UserService,
-    private readonly tagService: TagService
+    private readonly tagService: TagService,
+    private readonly commonSevice: CommonService
   ) {}
 
   async getPostById(postId: number) {
@@ -31,40 +34,37 @@ export class PostService {
       .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', {
         metaPostKey: 'thumbnail_id',
       })
-      .leftJoin(ImageEntity, 'image', 'image.id = uuid(pm.metaValue)')
-      .leftJoin(CommentEntity, 'comment', 'comment.post = post.id')
-      .leftJoin(UserEntity, 'user', 'post.user = user.id')
-      .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaKey', { metaKey: 'profile_image' })
-      .leftJoin(ImageEntity, 'imageAuth', 'imageAuth.id = uuid(um.metaValue)')
-      .groupBy('post.id, image.path, imageAuth.path, user.id, user.displayName')
+      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)')
       .select([
         'post.id as id',
         'post.title as title',
         'post.content as content',
         'post.createdAt as releasedate',
-        'post.countLike as countlike',
         'image.path as path',
-        'imageAuth.path as imageAuthor',
-        'user.id as idAuthor',
-        'user.displayName as nameAuthor',
       ])
-      .addSelect('COUNT(comment.id)', 'commentCount')
+      .addSelect((subQuery) => {
+        return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
+      }, 'commentCount')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(UserFollowEntity, 'vote')
+          .where('vote.objectId = post.id')
+          .andWhere('vote.type = :upvoteType', { upvoteType: 'UPVOTE_POST' });
+      }, 'upvoteCount')
       .getRawOne();
+    const authors = await this.commonSevice.getAuthorPost([postId]);
     if (!post) return null;
     const tags = await this.tagService.findTagsByPostId(post.id);
     const result = {
       id: post?.id,
       title: post?.title,
       content: post?.content,
-      countLike: post?.countlike,
-      countComment: Number(post?.commentCount),
+      countLike: parseInt(post?.upvoteCount),
+      countComment: parseInt(post?.commentCount),
       image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
-      author: {
-        id: post?.idauthor,
-        display_name: post?.nameauthor,
-        avatar: post?.imageauthor ? appendUrlDomain(post?.imageauthor) : null,
-      },
+      author: authors ? authors[post.id] : null,
       tags: tags[0] ? tags.map((item) => ({ name: item.name, slug: item.slug })) : [],
     };
     return result;
@@ -84,46 +84,44 @@ export class PostService {
       .createQueryBuilder('post')
       .where('post.isActive = :isActive', { isActive: true })
       .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', { metaPostKey: 'thumbnail_id' })
-      .leftJoin(ImageEntity, 'image', 'image.id = uuid(pm.metaValue)')
-      .leftJoin(CommentEntity, 'comment', 'comment.post = post.id')
-      .leftJoin(UserEntity, 'user', 'post.user = user.id')
-      .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaKey', { metaKey: 'profile_image' })
-      .leftJoin(ImageEntity, 'imageAuth', 'imageAuth.id = uuid(um.metaValue)');
-    // xây các hàm bất đồng bộ lấy dữ liệu
+      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)');
+
     const dataPromis = queryPost
-      .groupBy('post.id, image.path, imageAuth.path, user.id, user.displayName')
       .select([
         'post.id as id',
         'post.title as title',
         'post.content as content',
         'post.createdAt as releasedate',
-        'post.countLike as countlike',
         'image.path as path',
-        'imageAuth.path as imageAuthor',
-        'user.id as idAuthor',
-        'user.displayName as nameAuthor',
       ])
-      .addSelect('COUNT(comment.id)', 'commentCount')
+      .addSelect((subQuery) => {
+        return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
+      }, 'commentCount')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(UserFollowEntity, 'vote')
+          .where('vote.objectId = post.id')
+          .andWhere('vote.type = :upvoteType', { upvoteType: 'UPVOTE_POST' });
+      }, 'upvoteCount')
       .limit(query.perPage)
       .orderBy(order, direction)
       .offset((query.page - 1) * query.perPage)
       .getRawMany();
+
     const countPromise = queryPost.getCount();
     // Chạy bất đồng bộ để lấy dữ liệu
     const [data, count] = await Promise.all([dataPromis, countPromise]);
+    const authors = await this.commonSevice.getAuthorPost(data.map((v) => v.id));
     //Map dữ liệu về đúng chuẩn cần lấy
     const content = data.map((post: any) => ({
       id: post?.id,
       title: post?.title,
-      countLike: post?.countlike,
-      countComment: Number(post?.commentCount),
+      countLike: parseInt(post?.upvoteCount),
+      countComment: parseInt(post?.commentCount),
       image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
-      author: {
-        id: post?.idauthor,
-        display_name: post?.nameauthor,
-        avatar: post?.imageauthor ? appendUrlDomain(post?.imageauthor) : null,
-      },
+      author: authors ? authors[post.id] : null,
     }));
     return {
       page_index: query.page,
@@ -147,28 +145,28 @@ export class PostService {
     const queryPost = this.postRepository
       .createQueryBuilder('post')
       .where('post.isActive = :isActive', { isActive: true })
+      .andWhere('post.userId = :userId', { userId: query.userId })
       .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', { metaPostKey: 'thumbnail_id' })
-      .leftJoin(ImageEntity, 'image', 'image.id = uuid(pm.metaValue)')
-      .leftJoin(CommentEntity, 'comment', 'comment.post = post.id')
-      .leftJoin(UserEntity, 'user', 'post.user = user.id')
-      .andWhere('user.id = :userId', { userId: query.userId })
-      .leftJoin(UserMetaEntity, 'um', 'um.user = user.id AND um.metaKey = :metaKey', { metaKey: 'profile_image' })
-      .leftJoin(ImageEntity, 'imageAuth', 'imageAuth.id = uuid(um.metaValue)');
+      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)');
     // xây các hàm bất đồng bộ lấy dữ liệu
     const dataPromis = queryPost
-      .groupBy('post.id, image.path, imageAuth.path, user.id, user.displayName')
       .select([
         'post.id as id',
         'post.title as title',
         'post.content as content',
         'post.createdAt as releasedate',
-        'post.countLike as countlike',
         'image.path as path',
-        'imageAuth.path as imageAuthor',
-        'user.id as idAuthor',
-        'user.displayName as nameAuthor',
       ])
-      .addSelect('COUNT(comment.id)', 'commentCount')
+      .addSelect((subQuery) => {
+        return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
+      }, 'commentCount')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(UserFollowEntity, 'vote')
+          .where('vote.objectId = post.id')
+          .andWhere('vote.type = :upvoteType', { upvoteType: 'UPVOTE_POST' });
+      }, 'upvoteCount')
       .limit(query.perPage)
       .orderBy(order, direction)
       .offset((query.page - 1) * query.perPage)
@@ -176,19 +174,17 @@ export class PostService {
     const countPromise = queryPost.getCount();
     // Chạy bất đồng bộ để lấy dữ liệu
     const [data, count] = await Promise.all([dataPromis, countPromise]);
+
+    const authors = await this.commonSevice.getAuthorPost(data.map((v) => v.id));
     //Map dữ liệu về đúng chuẩn cần lấy
     const content = data.map((post: any) => ({
       id: post?.id,
       title: post?.title,
-      countLike: post?.countlike,
-      countComment: post?.commentCount ? Number(post?.commentCount) : 0,
+      countLike: parseInt(post?.upvoteCount),
+      countComment: parseInt(post?.commentCount),
       image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
-      author: {
-        id: post?.idauthor,
-        display_name: post?.nameauthor,
-        avatar: post?.imageauthor ? appendUrlDomain(post?.imageauthor) : null,
-      },
+      author: authors ? authors[post.id] : null,
     }));
     return {
       page_index: query.page,
@@ -198,6 +194,7 @@ export class PostService {
       content: content,
     };
   }
+
   async createNewPost(userId: string, body: CreatePostDto) {
     const user = await this.userService.findUserByWhere({ id: userId });
     const tags: string[] | null = body.tags.match(/#\w+/g);

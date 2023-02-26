@@ -10,7 +10,7 @@ import {
 
 import { UserEntity } from './user.entity';
 
-@Entity({ name: 'user_meta' })
+@Entity()
 export class UserMetaEntity {
   @PrimaryGeneratedColumn()
   id: number;
