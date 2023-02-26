@@ -9,7 +9,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UserService } from './../user/user.service';
 import { PostMetaEntity } from './../../entities/post_meta.entity';
 import { TagService } from '../tags/tag.service';
-import { appendUrlDomain } from './../../helper/index';
+import { appendUrlDomain, isNumberInput } from './../../helper/index';
 import { UserFollowEntity } from 'src/entities/user_follow.entity';
 import { CommonService } from './../common/common.service';
 
@@ -152,16 +152,21 @@ export class PostService {
     perPage?: number;
     order?: string;
     direction?: string;
-    userId: number;
+    userId: number | string;
     userLogin?: number;
   }): Promise<IFPageRsq<any>> {
     const direction = query.direction === 'asc' ? 'DESC' : 'ASC';
     const order = query.order === 'popularity' ? 'post.score' : 'post.createdAt';
     // Cú pháp truy vấn vào cơ sở dữ liệu để lấy thông tin cần thiết
+    const isInput = isNumberInput(query.userId);
     const queryPost = this.postRepository
       .createQueryBuilder('post')
-      .where('post.isActive = :isActive', { isActive: true })
-      .andWhere('post.userId = :userId', { userId: query.userId })
+      .where('post.isActive = :isActive', { isActive: true });
+
+    if (isInput) queryPost.andWhere('post.userId = :userId', { userId: query.userId });
+    else queryPost.andWhere('post.userId = :userId', { userName: query.userId });
+
+    queryPost
       .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', { metaPostKey: 'thumbnail_id' })
       .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)')
       .select([

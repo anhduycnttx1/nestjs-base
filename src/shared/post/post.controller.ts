@@ -43,7 +43,7 @@ export class PostController {
   @Post('posts/user/:userId')
   async getPostListByUser(
     @Query() query: any,
-    @Param('userId') userId: number,
+    @Param('userId') userId: number | string,
     @Body('token') token: string
   ): Promise<IFRsp<any>> {
     const page = Number(query['page-index']) || 1;
@@ -87,7 +87,7 @@ export class PostController {
     return { code: 200, message: 'ok', data: result };
   }
 
-  @Post('posts')
+  @Post('create/posts')
   @UseGuards(JwtAuthGuard)
   async createPost(@Body() body: CreatePostDto, @Req() req: Request): Promise<IFRsp<any>> {
     const userId = req.user['sub'];
