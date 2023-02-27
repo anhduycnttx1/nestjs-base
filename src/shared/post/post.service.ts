@@ -9,12 +9,28 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UserService } from './../user/user.service';
 import { PostMetaEntity } from './../../entities/post_meta.entity';
 import { TagService } from '../tags/tag.service';
-import { appendUrlDomain, isNumberInput } from './../../helper/index';
+import { appendUrlDomain, generateKeyCache, validatedKeyCache } from './../../helper/index';
 import { UserFollowEntity } from 'src/entities/user_follow.entity';
 import { CommonService } from './../common/common.service';
 
+type QueryPosts = {
+  page?: number;
+  perPage?: number;
+  order?: string;
+  direction?: string;
+  title?: string;
+  memberId?: number;
+  userLoginId?: number;
+};
+
 @Injectable()
 export class PostService {
+  private cache: Map<string, { data: any; expiresAt: number }> = new Map<string, { data: any; expiresAt: number }>();
+  private orderKey = {
+    popularity: 'post.score',
+    upvote: 'upvotecount',
+    comment: 'commentcount',
+  };
   constructor(
     @InjectRepository(PostEntity)
     private readonly postRepository: Repository<PostEntity>,
@@ -25,7 +41,12 @@ export class PostService {
     private readonly commonSevice: CommonService
   ) {}
 
-  async getPostById(postId: number, userId?: number) {
+  async getPostById(postId: number, memberId?: number) {
+    const keyCache = generateKeyCache('post_details', { postId, memberId });
+    const cachedPosts = this.cache.get(keyCache);
+    if (cachedPosts && cachedPosts.expiresAt > Date.now() && validatedKeyCache(keyCache, { postId, memberId })) {
+      return cachedPosts.data.result;
+    }
     const post = await this.postRepository
       .createQueryBuilder('post')
       .where('post.isActive = :isActive AND post.id = :postId', { isActive: true, postId: postId })
@@ -55,7 +76,7 @@ export class PostService {
     if (!post) return null;
     const tags = await this.tagService.findTagsByPostId(post.id);
     let isUpvote = false;
-    if (userId) isUpvote = await this.commonSevice.checkIsFollow(userId, post.id);
+    if (memberId) isUpvote = await this.commonSevice.checkIsFollow(memberId, post.id);
     const result = {
       id: post?.id,
       title: post?.title,
@@ -68,20 +89,25 @@ export class PostService {
       tags: tags[0] ? tags.map((item) => ({ name: item.name, slug: item.slug })) : [],
       isUpvote: isUpvote,
     };
+    this.cache.set(keyCache, { data: { result }, expiresAt: Date.now() + 3000 });
     return result;
   }
 
-  async getlistPost(query: {
-    page?: number;
-    perPage?: number;
-    order?: string;
-    direction?: string;
-    title?: string;
-    userId?: number;
-  }): Promise<IFPageRsq<any>> {
-    const direction = query.direction === 'asc' ? 'DESC' : 'ASC';
-    const order = query.order === 'popularity' ? 'post.score' : 'post.createdAt';
+  async getPosts(query: QueryPosts): Promise<IFPageRsq<any>> {
+    const direction = query.direction === 'asc' ? 'ASC' : 'DESC';
+    const order = this.orderKey[query.order] ? this.orderKey[query.order] : 'post.createdAt';
     // Cú pháp truy vấn vào cơ sở dữ liệu để lấy thông tin cần thiết
+    const keyCache = generateKeyCache('posts_data', query);
+    const cachedPosts = this.cache.get(keyCache);
+    if (cachedPosts && cachedPosts.expiresAt > Date.now() && validatedKeyCache(keyCache, query)) {
+      return {
+        page_index: query.page,
+        item_count: query.perPage,
+        page_total: Math.ceil(cachedPosts.data.count / query.perPage),
+        item_total: cachedPosts.data.count,
+        content: cachedPosts.data.content,
+      };
+    }
     const queryPost = this.postRepository
       .createQueryBuilder('post')
       .where('post.isActive = :isActive', { isActive: true })
@@ -94,30 +120,35 @@ export class PostService {
         'post.createdAt as releasedate',
         'image.path as path',
       ]);
-    if (query.userId) {
+    if (query.title) {
+      queryPost.andWhere('post.title ILIKE :title', { title: `%${query.title}%` });
+    }
+    if (query.memberId) {
+      queryPost.andWhere('post.userId = :memberId', { memberId: query.memberId });
+    }
+    if (query.userLoginId) {
       queryPost.addSelect((subQuery) => {
         return subQuery
           .select('COUNT(*)')
           .from(UserFollowEntity, 'follow')
-          .where('follow.userId = :userId', {
-            userId: query.userId,
+          .where('follow.userId = :userLoginId', {
+            userLoginId: query.userLoginId,
           })
           .andWhere('follow.objectId = post.id')
           .andWhere('follow.type = :type', { type: 'UPVOTE_POST' });
       }, 'isUpvote');
     }
-
     const dataPromis = queryPost
       .addSelect((subQuery) => {
         return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
-      }, 'commentCount')
+      }, 'commentcount')
       .addSelect((subQuery) => {
         return subQuery
           .select('COUNT(*)')
           .from(UserFollowEntity, 'vote')
           .where('vote.objectId = post.id')
           .andWhere('vote.type = :upvoteType', { upvoteType: 'UPVOTE_POST' });
-      }, 'upvoteCount')
+      }, 'upvotecount')
       .limit(query.perPage)
       .orderBy(order, direction)
       .offset((query.page - 1) * query.perPage)
@@ -131,95 +162,14 @@ export class PostService {
     const content = data.map((post: any) => ({
       id: post?.id,
       title: post?.title,
-      countLike: parseInt(post?.upvoteCount),
-      countComment: parseInt(post?.commentCount),
+      countLike: parseInt(post?.upvotecount),
+      countComment: parseInt(post?.commentcount),
       image: post?.path ? appendUrlDomain(post?.path) : null,
       release_date: post?.releasedate,
       author: authors ? authors[post.id] : null,
       isUpvote: post?.isUpvote ? (Number(post.isUpvote) > 0 ? true : false) : false,
     }));
-    return {
-      page_index: query.page,
-      item_count: query.perPage,
-      page_total: Math.ceil(count / query.perPage),
-      item_total: count,
-      content: content,
-    };
-  }
-
-  async getlistPostByUser(query: {
-    page?: number;
-    perPage?: number;
-    order?: string;
-    direction?: string;
-    userId: number | string;
-    userLogin?: number;
-  }): Promise<IFPageRsq<any>> {
-    const direction = query.direction === 'asc' ? 'DESC' : 'ASC';
-    const order = query.order === 'popularity' ? 'post.score' : 'post.createdAt';
-    // Cú pháp truy vấn vào cơ sở dữ liệu để lấy thông tin cần thiết
-    const isInput = isNumberInput(query.userId);
-    const queryPost = this.postRepository
-      .createQueryBuilder('post')
-      .where('post.isActive = :isActive', { isActive: true });
-
-    if (isInput) queryPost.andWhere('post.userId = :userId', { userId: query.userId });
-    else queryPost.andWhere('post.userId = :userId', { userName: query.userId });
-
-    queryPost
-      .leftJoin('post.metas', 'pm', 'pm.metaKey = :metaPostKey', { metaPostKey: 'thumbnail_id' })
-      .leftJoin(ImageEntity, 'image', 'image.id = CAST(pm.metaValue AS int)')
-      .select([
-        'post.id as id',
-        'post.title as title',
-        'post.content as content',
-        'post.createdAt as releasedate',
-        'image.path as path',
-      ]);
-    // xây các hàm bất đồng bộ lấy dữ liệu
-    if (query.userLogin) {
-      queryPost.addSelect((subQuery) => {
-        return subQuery
-          .select('COUNT(*)')
-          .from(UserFollowEntity, 'follow')
-          .where('follow.userId = :userId', {
-            userId: query.userId,
-          })
-          .andWhere('follow.objectId = post.id')
-          .andWhere('follow.type = :type', { type: 'UPVOTE_POST' });
-      }, 'isUpvote');
-    }
-    const dataPromis = queryPost
-      .addSelect((subQuery) => {
-        return subQuery.select('COUNT(*)').from(CommentEntity, 'cmt').where('cmt.postId = post.id');
-      }, 'commentCount')
-      .addSelect((subQuery) => {
-        return subQuery
-          .select('COUNT(*)')
-          .from(UserFollowEntity, 'vote')
-          .where('vote.objectId = post.id')
-          .andWhere('vote.type = :upvoteType', { upvoteType: 'UPVOTE_POST' });
-      }, 'upvoteCount')
-      .limit(query.perPage)
-      .orderBy(order, direction)
-      .offset((query.page - 1) * query.perPage)
-      .getRawMany();
-    const countPromise = queryPost.getCount();
-    // Chạy bất đồng bộ để lấy dữ liệu
-    const [data, count] = await Promise.all([dataPromis, countPromise]);
-
-    const authors = await this.commonSevice.getAuthorPost(data.map((v) => v.id));
-    //Map dữ liệu về đúng chuẩn cần lấy
-    const content = data.map((post: any) => ({
-      id: post?.id,
-      title: post?.title,
-      countLike: parseInt(post?.upvoteCount),
-      countComment: parseInt(post?.commentCount),
-      image: post?.path ? appendUrlDomain(post?.path) : null,
-      release_date: post?.releasedate,
-      author: authors ? authors[post.id] : null,
-      isUpvote: post?.isUpvote ? (Number(post.isUpvote) > 0 ? true : false) : false,
-    }));
+    this.cache.set(keyCache, { data: { content, count }, expiresAt: Date.now() + 3000 });
     return {
       page_index: query.page,
       item_count: query.perPage,
@@ -232,7 +182,6 @@ export class PostService {
   async createNewPost(userId: string, body: CreatePostDto) {
     const user = await this.userService.findUserByWhere({ id: userId });
     const tags: string[] | null = body.tags.match(/#\w+/g);
-
     //Tạo post
     const post = new PostEntity();
     post.user = user;

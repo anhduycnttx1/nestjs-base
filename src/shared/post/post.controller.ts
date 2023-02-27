@@ -2,92 +2,68 @@ import { Controller, Post, Body, UseGuards, Param, Get, Req, Query } from '@nest
 import { Request } from 'express';
 import { DataNotFoundException } from 'src/exceptions';
 import { PostService } from './post.service';
-import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { JwtAuthGuard, JwtUserGuard } from 'src/auth/auth.guard';
 import { IFRsp } from 'src/types';
 import { CreatePostDto } from './dto/create-post.dto';
-import { JwtService } from '@nestjs/jwt';
+
 @Controller()
 export class PostController {
-  constructor(private readonly postService: PostService, private readonly jwtService: JwtService) {}
+  constructor(private readonly postService: PostService) {}
 
-  @Post('posts')
-  async getPostList(@Query() query: any, @Body('token') token: string): Promise<IFRsp<any>> {
+  @Get('posts')
+  @UseGuards(JwtUserGuard)
+  async getPostList(@Query() query: any, @Req() request: Request): Promise<IFRsp<any>> {
     const page = Number(query['page-index']) || 1;
     const perPage = Number(query['page-size']) || 20;
-    const order = query['order'] || '';
-    const direction = query['direction'] || 'asc';
-    const title = query['title'] || '';
+    const order = query['order'] || 'title';
+    const direction = query['direction'] || 'desc';
+    const title = query['title'] || null;
+    const input = { page, perPage, direction, order, title };
     let result = null;
-    try {
-      const payload = await this.jwtService.verifyAsync(token, { secret: 'at-secret' });
-      result = await this.postService.getlistPost({
-        page,
-        perPage,
-        direction,
-        title,
-        order,
-        userId: parseInt(payload?.sub),
-      });
-    } catch (_) {
-      result = await this.postService.getlistPost({
-        page,
-        perPage,
-        direction,
-        title,
-        order,
-      });
+    if (request.user) {
+      result = await this.postService.getPosts({ ...input, userLoginId: request.user['id'] });
+    } else {
+      result = await this.postService.getPosts(input);
     }
-
     return { code: 200, message: 'ok', data: result };
   }
-  @Post('posts/user/:userId')
+
+  @Get('posts/user/:memberId')
+  @UseGuards(JwtUserGuard)
   async getPostListByUser(
     @Query() query: any,
-    @Param('userId') userId: number | string,
-    @Body('token') token: string
+    @Param('memberId') memberId: number,
+    @Req() request: Request
   ): Promise<IFRsp<any>> {
     const page = Number(query['page-index']) || 1;
     const perPage = Number(query['page-size']) || 20;
-    const order = query['order'] || '';
+    const order = query['order'] || 'title';
     const direction = query['direction'] || 'asc';
+    const title = query['title'] || null;
+    const input = { page, perPage, direction, memberId, order, title };
     let result = null;
-    try {
-      const payload = await this.jwtService.verifyAsync(token, { secret: 'at-secret' });
-      result = result = await this.postService.getlistPostByUser({
-        page,
-        perPage,
-        direction,
-        userId,
-        order,
-        userLogin: parseInt(payload?.sub),
-      });
-    } catch (_) {
-      result = await this.postService.getlistPostByUser({
-        page,
-        perPage,
-        direction,
-        userId,
-        order,
-      });
+    if (request.user) {
+      result = await this.postService.getPosts({ ...input, userLoginId: request.user['id'] });
+    } else {
+      result = await this.postService.getPosts(input);
     }
-
     return { code: 200, message: 'ok', data: result };
   }
 
-  @Post('post/:postId')
-  async getPostDetail(@Param('postId') postId: number, @Body('token') token: string): Promise<IFRsp<any>> {
+  @Get('post/details/:postId')
+  @UseGuards(JwtUserGuard)
+  async getPostDetail(@Param('postId') postId: number, @Req() request: Request): Promise<IFRsp<any>> {
     let result = null;
-    try {
-      const payload = await this.jwtService.verifyAsync(token, { secret: 'at-secret' });
-      result = await this.postService.getPostById(postId, Number(payload?.sub));
-    } catch (_) {
+    if (request.user) {
+      result = await this.postService.getPostById(postId, request.user['id']);
+    } else {
       result = await this.postService.getPostById(postId);
     }
     if (!result) throw new DataNotFoundException(`Post id ${postId} not found`);
     return { code: 200, message: 'ok', data: result };
   }
 
-  @Post('create/posts')
+  @Post('posts')
   @UseGuards(JwtAuthGuard)
   async createPost(@Body() body: CreatePostDto, @Req() req: Request): Promise<IFRsp<any>> {
     const userId = req.user['sub'];

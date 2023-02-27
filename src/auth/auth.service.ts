@@ -6,6 +6,8 @@ import { UserService } from 'src/shared/user/user.service';
 import { AuthFailedException, UnauthorizedException } from 'src/exceptions';
 import { SignupDto } from './dto/signup.dto';
 import * as argon from 'argon2';
+import { UserEntity } from './../entities/user.entity';
+import { isNumberInput } from 'src/helper';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +33,7 @@ export class AuthService {
     await this.userService.updateUser(userSignIn.id, { hashRefresh: hasedToken });
     return token;
   }
+
   async login(loginDto: LoginDto): Promise<IFToken> {
     const { username, password } = loginDto;
     // Kiểm tra tính hợp lệ của thông tin đăng nhập
@@ -69,6 +72,20 @@ export class AuthService {
   async validateUser(id: number) {
     const user = await this.userService.findUserByWhere({ id: id });
     if (!user) return null;
+    return user;
+  }
+
+  async getUserByToken(token: string): Promise<UserEntity> {
+    const payload = this.jwtService.decode(token) as { sub: number | string };
+    if (!payload) {
+      return null;
+    }
+    let user = null;
+    if (isNumberInput(payload.sub)) {
+      user = await this.userService.findUserByWhere({ id: payload.sub });
+    } else {
+      user = await this.userService.findUserByWhere({ userName: payload.sub });
+    }
     return user;
   }
 
