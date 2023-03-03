@@ -28,6 +28,16 @@ export class PostController {
     return { code: 200, message: 'ok', data: result };
   }
 
+  @Get('posts/feed')
+  @UseGuards(JwtAuthGuard)
+  async getPostsFeed(@Query() query: any, @Req() request: Request): Promise<IFRsp<any>> {
+    const page = Number(query['page-index']) || 1;
+    const perPage = Number(query['page-size']) || 20;
+    const input = { page, perPage };
+    const result = await this.postService.getFeedsPosts({ ...input, userLoginId: request.user['sub'] });
+    return { code: 200, message: 'ok', data: result };
+  }
+
   @Get('posts/user/:memberId')
   @UseGuards(JwtUserGuard)
   async getPostListByUser(
@@ -69,5 +79,13 @@ export class PostController {
     const userId = req.user['sub'];
     const result = await this.postService.createNewPost(userId, body);
     return { code: 201, message: 'ok', data: result };
+  }
+
+  @Post('post/delete/:postId')
+  @UseGuards(JwtAuthGuard)
+  async deletePost(@Param('postId') postId: number, @Req() request: Request): Promise<IFRsp<any>> {
+    const result = await this.postService.getPostById(postId, request.user['id']);
+    if (!result) throw new DataNotFoundException(`Post id ${postId} not found`);
+    return { code: 200, message: 'ok', data: result };
   }
 }
